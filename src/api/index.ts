@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import authRoutes from "./auth/auth.route.js";
 import adminAccountRoutes from "./admin/account/account.route.js";
+import adminReportRoutes from "./admin/report/report.route.js";
 import roleRoutes from "./user/user.route.js";
 import facyltyRoutes from "./admin/Faculty/faculty.route.js";
 import RoomRoutes from "./admin/room/room.route.js";
@@ -23,6 +24,7 @@ router.get("/", (req: Request, res: Response) => {
 router.use("/auth", authRoutes);
 router.use("/user", roleRoutes);
 router.use("/admin/account", adminAccountRoutes);
+router.use("/admin/report", adminReportRoutes);
 router.use("/admin/faculty", facyltyRoutes);
 router.use("/admin/rooms", RoomRoutes);
 router.use("/admin/timetables", TimetableRoutes);

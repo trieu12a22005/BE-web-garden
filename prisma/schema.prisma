@@ -653,3 +653,14 @@ model Notification {
   isRead      Boolean   @default(false)
   createdAt   DateTime  @default(now()) @db.Timestamptz(3)
 }
+
+// =======================
+// Config
+// =======================
+model SystemConfig {
+  key         String  @id @db.VarChar(50) // VD: "MAX_PATIENTS_PER_DAY"
+  value       String  @db.VarChar(255)    // VD: "40"
+  description String?
+
+  @@map("SystemConfig")
+}
