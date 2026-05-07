@@ -55,7 +55,7 @@ export const verifyRefreshToken = async (req: Request, res: Response, next: Next
   const tokenInDb = await findRefreshTokenInWhitelist(refreshToken);
   if (!tokenInDb) {
     // clear đúng path bạn set refresh cookie
-    res.clearCookie("refreshToken", { path: "/auth/refresh" });
+    res.clearCookie("refreshToken", { path: "/" });
     res.clearCookie("accessToken", { path: "/" });
     return res.status(401).json({ message: "Refresh token revoked or expired" });
   }

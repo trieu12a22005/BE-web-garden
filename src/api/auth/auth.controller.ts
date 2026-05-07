@@ -34,12 +34,14 @@ export const loginUser = async (req: Request, res: Response, next: NextFunction)
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       maxAge: 60 * 60 * 1000, // 1 hour
+      path: "/",
     });
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: "/",
     });
     await addRefreshTokenToCookieToWhitelist({ refreshToken, userId: account.accountID });
     return res.status(200).json({
@@ -64,14 +66,16 @@ export const refreshTokens = async (req: Request, res: Response, next: NextFunct
     // lấy thông tin user để tạo access token
     const account = await prisma.account.findUnique({
       where: { accountID: userId },
-      select: { email: true, roleName: true },
+      select: { email: true, roleName: true, roleID: true, role: true },
     });
     if (!account) return res.status(401).json({ message: "Unauthorized" });
 
     const { accessToken, refreshToken: newRefreshToken } = generateTokens({
       id: userId,
       email: account.email,
-      role: account.roleName,
+      role: account.role?.roleName || account.roleName,
+      roleName: account.role?.roleName || account.roleName,
+      roleID: account.roleID,
     });
 
     await addRefreshTokenToCookieToWhitelist({ refreshToken: newRefreshToken, userId });
@@ -89,7 +93,7 @@ export const refreshTokens = async (req: Request, res: Response, next: NextFunct
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: "/auth/refresh",
+      path: "/",
     });
 
     return res.status(200).json({ message: "Token refreshed" });
