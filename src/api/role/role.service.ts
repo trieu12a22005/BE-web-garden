@@ -1,5 +1,6 @@
 import prisma from "../../utils/prisma.js";
 import { CreateRoleInput, UpdateRoleInput } from "../../schema/role.schema.js";
+import { ProhibitedError } from "../admin/appointment/appointment.service.js";
 
 export const roleService = {
   async getAllRoles() {
@@ -94,8 +95,12 @@ export const roleService = {
 
   async deleteRole(roleID: string) {
     return prisma.$transaction(async (tx) => {
-      // RolePermission has no action on role deletion, we should manually delete it or let Cascade do it if setup.
-      // Assuming no Cascade on RolePermission in schema, we need to delete children first.
+      const existedAccount = await tx.account.findFirst({
+        where: {
+          roleID,
+        },
+      });
+      if (existedAccount) throw new ProhibitedError("Không thể xóa vai trò vì có người dùng đang giữ vai trò trên. ");
       await tx.rolePermission.deleteMany({
         where: { roleID },
       });
