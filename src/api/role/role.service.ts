@@ -30,7 +30,7 @@ export const roleService = {
   },
 
   async createRole(data: CreateRoleInput) {
-    const { roleName, roleDescription, permissionIDs } = data;
+    const { roleName, roleDescription, permissions } = data;
 
     return prisma.$transaction(async (tx) => {
       const role = await tx.role.create({
@@ -40,9 +40,9 @@ export const roleService = {
         },
       });
 
-      if (permissionIDs && permissionIDs.length > 0) {
+      if (permissions && permissions.length > 0) {
         await tx.rolePermission.createMany({
-          data: permissionIDs.map((permissionID) => ({
+          data: permissions.map((permissionID) => ({
             roleID: role.roleID,
             permissionID,
           })),
@@ -54,7 +54,7 @@ export const roleService = {
   },
 
   async updateRole(roleID: string, data: UpdateRoleInput) {
-    const { roleName, roleDescription, permissionIDs } = data;
+    const { roleName, roleDescription, permissions } = data;
 
     return prisma.$transaction(async (tx) => {
       const updateData: any = {};
@@ -72,15 +72,15 @@ export const roleService = {
         if (!role) throw new Error("Role not found");
       }
 
-      if (permissionIDs !== undefined) {
+      if (permissions !== undefined) {
         // Delete all old permissions and recreate
         await tx.rolePermission.deleteMany({
           where: { roleID },
         });
 
-        if (permissionIDs.length > 0) {
+        if (permissions.length > 0) {
           await tx.rolePermission.createMany({
-            data: permissionIDs.map((permissionID) => ({
+            data: permissions.map((permissionID) => ({
               roleID,
               permissionID,
             })),

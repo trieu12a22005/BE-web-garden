@@ -62,7 +62,7 @@ const router = Router();
  *           type: string
  *           maxLength: 255
  *           example: "Nursing staff role"
- *         permissionIDs:
+ *         permissions:
  *           type: array
  *           description: Optional list of permission IDs to attach
  *           items:
@@ -73,7 +73,7 @@ const router = Router();
  *     RoleUpdateRequest:
  *       type: object
  *       description: |
- *         All fields are optional. When `permissionIDs` is provided, it replaces
+ *         All fields are optional. When `permissions` is provided, it replaces
  *         all existing role permissions. Use an empty array to clear permissions.
  *       properties:
  *         roleName:
@@ -85,7 +85,7 @@ const router = Router();
  *           type: string
  *           maxLength: 255
  *           example: "Updated description"
- *         permissionIDs:
+ *         permissions:
  *           type: array
  *           items:
  *             type: string
@@ -239,7 +239,7 @@ router.post("/", verifyAccessToken, validateBody(createRoleSchema), createRole);
  *   patch:
  *     summary: Update a role
  *     description: |
- *       Updates role fields and/or permissions. When `permissionIDs` is provided,
+ *       Updates role fields and/or permissions. When `permissions` is provided,
  *       existing role permissions are replaced. Use an empty array to clear permissions.
  *     tags: [Role]
  *     security:
