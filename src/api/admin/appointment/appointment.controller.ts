@@ -147,8 +147,7 @@ export const GetAppointmentById = async (req: Request, res: Response, next: Next
                 patient: { include: { account: true } },
                 room: { include: { faculty: true } },
                 approvedByAccount: true,
-                enterTickets: true,
-                examineLogs: true
+                enterTickets: true
             }
         });
 

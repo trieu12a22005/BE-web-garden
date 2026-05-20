@@ -194,53 +194,53 @@ model RolePermission {
 // =======================
 
 model Account {
-  accountID   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountID   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   // roleName kept for backwards compatibility only — DO NOT use for authorization logic.
   // Use roleID + role relation instead.
-  roleName    String?   @db.VarChar(50)
-  firstName   String    @db.VarChar(50)
-  lastName    String    @db.VarChar(75)
-  password    String?   @db.VarChar(100)
-  email       String    @unique @db.VarChar(254)
-  phoneNumber String?   @db.VarChar(12)
-  avatarUrl   String?   @db.VarChar(255)
-  createdAt   DateTime  @default(now()) @db.Timestamp(6)
-  birthDate   DateTime  @db.Date
-  gender      Gender?   @default(male)
+  roleName    String?  @db.VarChar(50)
+  firstName   String   @db.VarChar(50)
+  lastName    String   @db.VarChar(75)
+  password    String?  @db.VarChar(100)
+  email       String   @unique @db.VarChar(254)
+  phoneNumber String?  @db.VarChar(12)
+  avatarUrl   String?  @db.VarChar(255)
+  createdAt   DateTime @default(now()) @db.Timestamp(6)
+  birthDate   DateTime @db.Date
+  gender      Gender?  @default(male)
   address     String?
-  is_active   Boolean   @default(true)
-  DisplayID   String?   @unique @db.VarChar(8)
+  is_active   Boolean  @default(true)
+  DisplayID   String?  @unique @db.VarChar(8)
 
   // Optional professional fields (formerly split across Doctor/Staff/Pharmacist/Manager sub-tables)
-  startDate    DateTime?    @db.Date
+  startDate    DateTime?     @db.Date
   doctorStatus DoctorStatus?
-  staffNote    String?      @db.VarChar(255)
+  staffNote    String?       @db.VarChar(255)
 
   roleID String? @db.Uuid
   role   Role?   @relation(fields: [roleID], references: [roleID], onDelete: Restrict)
 
-  refreshTokens  RefreshToken[]
-  patient        Patient?
-  workspaces     AccountWorkspace[]
+  refreshTokens RefreshToken[]
+  patient       Patient?
+  workspaces    AccountWorkspace[]
 
   // Relations as the actor (formerly sub-table ID = accountID)
-  timetables           Timetable[]      @relation("AccountTimetables")
-  examineLogs          ExamineLog[]     @relation("AccountExamineLogs")
-  prescriptionsAsDoctor Prescription[]  @relation("PrescriptionDoctor")
-  prescriptionsAsPharmacist Prescription[] @relation("PrescriptionPharmacist")
-  imexLogs             ImexMedicineLog[]
-  approvedAppointments Appointment[]    @relation("AppointmentApprovedBy")
-  doctorAppointments   Appointment[]    @relation("AppointmentDoctor")
+  timetables                Timetable[]       @relation("AccountTimetables")
+  examineLogs               ExamineLog[]      @relation("AccountExamineLogs")
+  prescriptionsAsDoctor     Prescription[]    @relation("PrescriptionDoctor")
+  prescriptionsAsPharmacist Prescription[]    @relation("PrescriptionPharmacist")
+  imexLogs                  ImexMedicineLog[]
+  approvedAppointments      Appointment[]     @relation("AppointmentApprovedBy")
+  doctorAppointments        Appointment[]     @relation("AppointmentDoctor")
 
   @@map("Account")
 }
 
 // AccountWorkspace: maps an account to a room and/or faculty (replaces Pharmacist.roomID and Doctor.fromFaculty)
 model AccountWorkspace {
-  workspaceID String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  accountID   String   @db.Uuid
-  roomID      String?  @db.Uuid
-  facultyID   String?  @db.Uuid
+  workspaceID String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountID   String  @db.Uuid
+  roomID      String? @db.Uuid
+  facultyID   String? @db.Uuid
 
   account Account  @relation(fields: [accountID], references: [accountID], onDelete: Cascade)
   room    Room?    @relation(fields: [roomID], references: [roomID], onDelete: SetNull)
@@ -270,12 +270,12 @@ model Patient {
 // Faculty / Room
 // =======================
 model Faculty {
-  facultyID        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  facultyName      String        @unique
-  status           EntityStatus  @default(ACTIVE)
-  facultyDescription  String?       @db.VarChar(255)
-  rooms      Room[]
-  workspaces AccountWorkspace[]
+  facultyID          String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  facultyName        String             @unique
+  status             EntityStatus       @default(ACTIVE)
+  facultyDescription String?            @db.VarChar(255)
+  rooms              Room[]
+  workspaces         AccountWorkspace[]
 
   @@map("Faculty")
 }
@@ -304,7 +304,7 @@ model Room {
 // =======================
 model Timetable {
   timeID    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  accountID String    @db.Uuid  // formerly doctorID
+  accountID String    @db.Uuid // formerly doctorID
   roomID    String    @db.Uuid
   dayOfWeek DayOfWeek
   note      String?   @db.VarChar(255)
@@ -324,8 +324,8 @@ model Appointment {
 
   roomID     String? @db.Uuid
   patientID  String  @db.Uuid
-  approvedBy String? @db.Uuid  // FK → Account
-  doctorID   String? @db.Uuid  // FK → Account
+  approvedBy String? @db.Uuid // FK → Account
+  doctorID   String? @db.Uuid // FK → Account
 
   reason String? @default("")
 
@@ -333,13 +333,11 @@ model Appointment {
   depositStatus DepositStatus     @default(unpaid)
   createdAt     DateTime          @default(now()) @db.Timestamp(6)
 
-  room            Room?    @relation(fields: [roomID], references: [roomID], onDelete: SetNull)
-  patient         Patient  @relation(fields: [patientID], references: [patientID], onDelete: Cascade)
-  approvedByAccount Account? @relation("AppointmentApprovedBy", fields: [approvedBy], references: [accountID], onDelete: SetNull)
-  doctor          Account? @relation("AppointmentDoctor", fields: [doctorID], references: [accountID], onDelete: SetNull)
-  enterTickets    EnterTicket[]
-  examineLogs     ExamineLog[]
-
+  room              Room?         @relation(fields: [roomID], references: [roomID], onDelete: SetNull)
+  patient           Patient       @relation(fields: [patientID], references: [patientID], onDelete: Cascade)
+  approvedByAccount Account?      @relation("AppointmentApprovedBy", fields: [approvedBy], references: [accountID], onDelete: SetNull)
+  doctor            Account?      @relation("AppointmentDoctor", fields: [doctorID], references: [accountID], onDelete: SetNull)
+  enterTickets      EnterTicket[]
   @@map("Appointment")
 }
 
@@ -355,11 +353,10 @@ model EnterTicket {
   checkIn       DateTime     @default(now()) @db.Timestamp(6)
   status        TicketStatus @default(pending)
   note          String?      @db.VarChar(255)
-
   appointment Appointment @relation(fields: [appointmentID], references: [appointmentID], onDelete: Cascade)
   patient     Patient     @relation(fields: [patientID], references: [patientID], onDelete: Cascade)
   room        Room        @relation(fields: [roomID], references: [roomID], onDelete: Restrict)
-
+  examineLogs       ExamineLog[]
   @@map("EnterTicket")
 }
 
@@ -375,10 +372,10 @@ model Disease {
 
 model ExamineLog {
   examineID     String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  appointmentID String        @db.Uuid
+  enterTicketID String        @db.Uuid
   patientID     String        @db.Uuid
   symptoms      String        @db.VarChar(255)
-  examinedBy    String        @db.Uuid  // FK → Account
+  examinedBy    String        @db.Uuid // FK → Account
   createdAt     DateTime      @default(now()) @db.Timestamp(6)
   status        ExamineStatus @default(draft)
 
@@ -392,11 +389,9 @@ model ExamineLog {
 
   treatmentPlan String? @db.VarChar(255)
   note          String? @db.VarChar(255)
-
-  appointment Appointment @relation(fields: [appointmentID], references: [appointmentID], onDelete: Cascade)
   patient     Patient     @relation(fields: [patientID], references: [patientID], onDelete: Cascade)
   doctor      Account     @relation("AccountExamineLogs", fields: [examinedBy], references: [accountID], onDelete: Restrict)
-
+  enterTicket EnterTicket @relation(fields: [enterTicketID], references: [ticketID], onDelete: Restrict)
   details      ExamineLogDetails[]
   tests        TestLog[]
   prescription Prescription?
@@ -480,8 +475,8 @@ model Prescription {
   prescriptionID        String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   prescriptionDisplayID String?
   examineID             String             @unique @db.Uuid
-  doctorID              String             @db.Uuid  // FK → Account
-  pharmacistID          String?            @db.Uuid  // FK → Account
+  doctorID              String             @db.Uuid // FK → Account
+  pharmacistID          String?            @db.Uuid // FK → Account
   patientID             String?            @db.Uuid
   createdAt             DateTime           @default(now()) @db.Timestamp(6)
   payAmount             Decimal?           @default(0) @db.Decimal(12, 2)
@@ -491,10 +486,10 @@ model Prescription {
   needReExamine      Boolean @default(true)
   totalTreatmentDays Int     @default(0)
 
-  examine    ExamineLog  @relation(fields: [examineID], references: [examineID], onDelete: Cascade)
-  doctor     Account     @relation("PrescriptionDoctor", fields: [doctorID], references: [accountID], onDelete: Restrict)
-  pharmacist Account?    @relation("PrescriptionPharmacist", fields: [pharmacistID], references: [accountID], onDelete: SetNull)
-  patient    Patient?    @relation("PrescriptionPatient", fields: [patientID], references: [patientID], onDelete: Cascade)
+  examine    ExamineLog @relation(fields: [examineID], references: [examineID], onDelete: Cascade)
+  doctor     Account    @relation("PrescriptionDoctor", fields: [doctorID], references: [accountID], onDelete: Restrict)
+  pharmacist Account?   @relation("PrescriptionPharmacist", fields: [pharmacistID], references: [accountID], onDelete: SetNull)
+  patient    Patient?   @relation("PrescriptionPatient", fields: [patientID], references: [patientID], onDelete: Cascade)
 
   details PrescriptionDetails[]
   tickets MedicineTicket[]
@@ -535,14 +530,14 @@ model MedicineTicket {
 // Imex logs
 // =======================
 model ImexMedicineLog {
-  imexID      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  imexType    ImexType
-  accountID   String   @db.Uuid  // formerly pharmacistID, now FK → Account
-  value       Decimal? @default(0) @db.Decimal(12, 2)
-  createdAt   DateTime @default(now()) @db.Timestamp(6)
-  note        String?  @db.VarChar(255)
+  imexID    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  imexType  ImexType
+  accountID String   @db.Uuid // formerly pharmacistID, now FK → Account
+  value     Decimal? @default(0) @db.Decimal(12, 2)
+  createdAt DateTime @default(now()) @db.Timestamp(6)
+  note      String?  @db.VarChar(255)
 
-  account Account             @relation(fields: [accountID], references: [accountID], onDelete: Restrict)
+  account Account               @relation(fields: [accountID], references: [accountID], onDelete: Restrict)
   details ImexMedicineDetails[]
 
   @@map("ImexMedicineLog")
@@ -605,13 +600,14 @@ model PaymentMonthReport {
   @@id([year, month, date])
   @@map("PaymentMonthReport")
 }
+
 model Notification {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title       String    @db.VarChar(255)
-  description String?   @db.VarChar(255)
-  link        String?   @db.VarChar(255)
-  isRead      Boolean   @default(false)
-  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title       String   @db.VarChar(255)
+  description String?  @db.VarChar(255)
+  link        String?  @db.VarChar(255)
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
 }
 
 // =======================
@@ -619,7 +615,7 @@ model Notification {
 // =======================
 model SystemConfig {
   key         String  @id @db.VarChar(50) // VD: "MAX_PATIENTS_PER_DAY"
-  value       String  @db.VarChar(255)    // VD: "40"
+  value       String  @db.VarChar(255) // VD: "40"
   description String?
 
   @@map("SystemConfig")

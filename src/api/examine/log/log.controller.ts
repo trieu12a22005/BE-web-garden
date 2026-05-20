@@ -20,6 +20,16 @@ export async function getExamineLogHandler(req: Request, res: Response, next: Ne
     next(error);
   }
 }
+
+export async function getExamineLogByTicketIDHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { ticketID } = req.params;
+    const result = await ExamineLogService.getExamineLogByTicketID(ticketID as string);
+    return res.json({ examineLog: result });
+  } catch (error) {
+    next(error);
+  }
+}
 export async function getExamineLogWithPrescriptionHandler(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params;

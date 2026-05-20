@@ -15,6 +15,22 @@ class DiseaseService {
       take: 10,
     });
   }
+
+  // Search by disease name (case-insensitive, partial match)
+  async searchDiseaseByName(keyword: string) {
+    return await prisma.disease.findMany({
+      where: {
+        diseaseName: {
+          contains: keyword,
+          mode: "insensitive",
+        },
+      },
+      omit: {
+        note: true,
+      },
+      take: 10,
+    });
+  }
 }
 
 export default new DiseaseService();

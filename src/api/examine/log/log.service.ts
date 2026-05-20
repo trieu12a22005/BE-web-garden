@@ -4,15 +4,23 @@ import prisma from "../../../utils/prisma.js";
 import { ObjectType, RecordType } from "../../../utils/types/index.js";
 
 type ExamineLogPayload = {
-  appointmentID: string;
+  enterTicketID: string;
   patientID: string;
   symptoms: string;
   status: ExamineStatus;
   treatmentPlan: string;
   examinedBy: string;
-  diagnose: string[];
+  diagnose: string | string[];
   note?: string;
 };
+
+/** Normalize diagnose to always be a string array.
+ *  Handles: string[] → as-is | "J00, J01" → ["J00", "J01"] | undefined → [] */
+function normalizeDiagnose(diagnose: string | string[] | undefined): string[] {
+  if (!diagnose) return [];
+  if (Array.isArray(diagnose)) return diagnose.map((d) => d.trim()).filter(Boolean);
+  return diagnose.split(",").map((d) => d.trim()).filter(Boolean);
+}
 
 class ExamineLogService {
   private readonly diseaseProjection = {
@@ -49,12 +57,13 @@ class ExamineLogService {
   }
 
   async submit(payload: ExamineLogPayload) {
-    const { appointmentID, patientID, symptoms, status, examinedBy, diagnose, note, treatmentPlan } = payload;
+    const { enterTicketID, patientID, symptoms, status, examinedBy, note, treatmentPlan } = payload;
+    const diagnoseList = normalizeDiagnose(payload.diagnose);
     const newExamineLog = await prisma.$transaction(async (tx) => {
       // Only get the examine log with ID and sequence. Used for further transactions
       const examineLite = await tx.examineLog.create({
         data: {
-          appointmentID,
+          enterTicketID,
           patientID,
           symptoms,
           status,
@@ -70,7 +79,7 @@ class ExamineLogService {
 
       // Add diagnose ID and display ID
       const examineID = examineLite.examineID;
-      const diagnoseDetails = diagnose.map((diseaseID: string) => ({ examineID, diseaseID }));
+      const diagnoseDetails = diagnoseList.map((diseaseID: string) => ({ examineID, diseaseID }));
       await tx.examineLogDetails.createMany({
         data: diagnoseDetails,
       });
@@ -129,15 +138,24 @@ class ExamineLogService {
     }
   }
 
+  async getExamineLogByTicketID(enterTicketID: string) {
+    return await prisma.examineLog.findFirst({
+      where: { enterTicketID },
+      include: { ...this.diseaseProjection },
+      omit: { sequence: true },
+    });
+  }
+
   async updateExamineLog(examineID: string, payload: Partial<ExamineLogPayload>) {
-    const { symptoms, status, diagnose, note, treatmentPlan } = payload;
+    const { symptoms, status, note, treatmentPlan } = payload;
     const updatedExamineLog = await prisma.$transaction(async (tx) => {
       // If diagnose is provided, delete all old diagnose and create new ones
-      if (diagnose) {
+      if (payload.diagnose) {
+        const diagnoseList = normalizeDiagnose(payload.diagnose);
         await tx.examineLogDetails.deleteMany({
           where: { examineID },
         });
-        const diagnoseDetails = diagnose.map((diseaseID: string) => ({ examineID, diseaseID }));
+        const diagnoseDetails = diagnoseList.map((diseaseID: string) => ({ examineID, diseaseID }));
         await tx.examineLogDetails.createMany({
           data: diagnoseDetails,
         });

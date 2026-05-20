@@ -5,6 +5,7 @@ import { Router } from "express";
 import { verifyAccessToken } from "../../../middlewares/verifyToken.js";
 import {
   createExamineLogHandler,
+  getExamineLogByTicketIDHandler,
   getExamineLogHandler,
   getExamineLogWithPrescriptionHandler,
   getPrintableExamineLogHandler,
@@ -53,7 +54,7 @@ import {
  *           type: string
  *           nullable: true
  *           example: KH2600000001
- *         appointmentID:
+ *         enterTicketID:
  *           type: string
  *           format: uuid
  *           example: b2c3d4e5-f6a7-8901-bcde-f12345678901
@@ -186,7 +187,7 @@ examineLogRouter.use(verifyAccessToken);
  *               examineLog:
  *                 examineID: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
  *                 examineDisplayID: "KH2600000001"
- *                 appointmentID: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+ *                 enterTicketID: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
  *                 patientID: "c3d4e5f6-a7b8-9012-cdef-123456789012"
  *                 examinedBy: "d4e5f6a7-b8c9-0123-defa-234567890123"
  *                 symptoms: "Đau đầu, sốt nhẹ"
@@ -226,17 +227,17 @@ examineLogRouter.get("/:id", getExamineLogHandler);
  *           schema:
  *             type: object
  *             required:
- *               - appointmentID
+ *               - enterTicketID
  *               - patientID
  *               - symptoms
  *               - status
  *               - treatmentPlan
  *               - diagnose
  *             properties:
- *               appointmentID:
+ *               enterTicketID:
  *                 type: string
  *                 format: uuid
- *                 description: UUID of the related appointment
+ *                 description: UUID of the related enter ticket
  *                 example: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
  *               patientID:
  *                 type: string
@@ -283,7 +284,7 @@ examineLogRouter.get("/:id", getExamineLogHandler);
  *                 description: Optional additional notes
  *                 example: "Bệnh nhân dị ứng Penicillin"
  *           example:
- *             appointmentID: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+ *             enterTicketID: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
  *             patientID: "c3d4e5f6-a7b8-9012-cdef-123456789012"
  *             symptoms: "Đau đầu, sốt nhẹ"
  *             status: "draft"
@@ -345,7 +346,7 @@ examineLogRouter.post("/new", createExamineLogHandler);
  *           schema:
  *             type: object
  *             properties:
- *               appointmentID:
+ *               enterTicketID:
  *                 type: string
  *                 format: uuid
  *               patientID:
@@ -475,6 +476,56 @@ examineLogRouter.put("/:id", updateExamineLogHandler);
  *         description: Internal server error
  */
 examineLogRouter.get("/:id/print", getPrintableExamineLogHandler);
+
+/**
+ * @swagger
+ * /examine/ticket/{ticketID}:
+ *   get:
+ *     summary: Get examine log by enter ticket ID
+ *     description: |
+ *       Returns the examine log associated with the given enter ticket.
+ *       Response contains `examineLog: null` when no record is found for the ticket.
+ *     tags:
+ *       - Examine
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: ticketID
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: UUID of the enter ticket
+ *         example: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+ *     responses:
+ *       200:
+ *         description: Examine log retrieved successfully (or null when not found)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 examineLog:
+ *                   oneOf:
+ *                     - $ref: '#/components/schemas/ExamineLogBase'
+ *                     - type: 'null'
+ *             example:
+ *               examineLog:
+ *                 examineID: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+ *                 examineDisplayID: "KH2600000001"
+ *                 enterTicketID: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+ *                 patientID: "c3d4e5f6-a7b8-9012-cdef-123456789012"
+ *                 symptoms: "Đau đầu, sốt nhẹ"
+ *                 status: "draft"
+ *                 details:
+ *                   - diseaseID: "J00"
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+examineLogRouter.get("/ticket/:ticketID", getExamineLogByTicketIDHandler);
 
 /**
  * @swagger
