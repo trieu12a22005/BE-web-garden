@@ -1,8 +1,7 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// ============================================================
+// Garden-BE: Prisma Schema
+// Hệ thống hỗ trợ sức khỏe tâm thần qua trồng hoa ảo - thật
+// ============================================================
 
 generator client {
   provider = "prisma-client-js"
@@ -13,622 +12,327 @@ datasource db {
   provider = "postgresql"
 }
 
-// AccountRole enum removed — role is now fully dynamic via the Role table.
-// profileType on Role determines which profile sub-table to create.
-
-enum DoctorStatus {
-  ACTIVE // Đang làm việc bình thường (Cho phép đặt lịch)
-  STOP_BOOKING // Ngừng nhận bệnh mới (Chỉ khám nợ cũ)
-  ON_LEAVE // Nghỉ phép/Ốm đột xuất (Tạm khóa lịch)
-  INACTIVE // Đã nghỉ việc hoàn toàn
-}
-
-enum BloodType {
-  a
-  o
-  b
-  ab
-}
-
-enum FacultyName {
-  CARDIOLOGY
-  GASTROENTEROLOGY
-  PULMONOLOGY
-  NEUROLOGY
-  ORTHOPEDICS
-}
-
-enum RoomType {
-  examination
-  pharmacy
-  cashier
-  lab
-}
-
-enum DayOfWeek {
-  mon
-  tue
-  wed
-  thu
-  fri
-  sat
-  sun
-}
-
-enum AppointmentStatus {
-  pending
-  approved
-  cancelled
-}
-
-enum DepositStatus {
-  paid
-  unpaid
-  refunded
-}
-
-enum AppointmentType {
-  examine
-  re_examine
-}
-
-enum TicketStatus {
-  pending
-  in_check
-  skip
-  done
-}
-
-enum ExamineStatus {
-  draft
-  done
-}
-
-enum PrescriptionStatus {
-  draft
-  done
-}
-
-
-enum MedicineTicketStatus {
-  pending
-  done
-}
-
-enum ImexType {
-  export
-  import
-}
-
-enum PaymentStatus {
-  unpaid
-  paid
-}
-
-enum PaymentMethod {
-  cash
-  qr
-}
-
-enum ServiceType {
-  examine
-  medicine
-  test
-}
-
-enum EntityStatus {
-  ACTIVE // Đang hoạt động bình thường
-  INACTIVE // Tạm ngưng
-  STOP_BOOKING // Ngừng đặt lịch mới nhưng vẫn duy trì các lịch đã đặt
-  DELETED // Xóa mềm 
-  MAINTENANCE // Đang bảo trì 
-}
-
-enum MedicineStatus {
-  IN_STOCK
-  OUT_OF_STOCK
-  DISCONTINUED
-  DELETED
-}
-
-enum Gender {
-  male
-  female
-}
-
+// ========================
+// AUTH SUPPORT
+// ========================
 model RefreshToken {
-  id Int @id @default(autoincrement())
-
-  userId      String?  @map("user_id_id") @db.Uuid
-  hashedToken String   @unique(map: "refresh_tokens_hashed_token_idx") @db.VarChar
+  id          Int      @id @default(autoincrement())
+  userId      String?  @db.Uuid
+  hashedToken String   @unique @db.VarChar(255)
   revoked     Boolean  @default(false)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
-  expiresAt   DateTime @map("expire_at") @db.Timestamptz(3)
-
-  user Account? @relation(fields: [userId], references: [accountID], onDelete: SetNull, onUpdate: NoAction, map: "refresh_tokens_user_id_id_user_id_fk")
-
-  @@index([userId], map: "refresh_tokens_user_id_idx")
-  @@map("refresh_tokens")
-}
-
-// =======================
-// RBAC Authorization 
-model Permission {
-  permissionID   String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  code           String  @unique @db.VarChar(64)
-  permissionName String  @db.VarChar(255)
-  description    String? @db.VarChar(255)
-
-  roles RolePermission[]
-
-  @@map("Permission")
-}
-
-model Role {
-  roleID          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  roleName        String           @db.VarChar(255)
-  roleDescription String?          @db.VarChar(255)
-  accounts        Account[]
-  permissions     RolePermission[]
-
-  @@map("Role")
-}
-
-model RolePermission {
-  roleID       String @db.Uuid
-  permissionID String @db.Uuid
-
-  role       Role       @relation(fields: [roleID], references: [roleID], onDelete: Cascade)
-  permission Permission @relation(fields: [permissionID], references: [permissionID], onDelete: Cascade)
-
-  @@id([roleID, permissionID])
-  @@map("RolePermission")
-}
-
-// =======================
-
-model Account {
-  accountID   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  // roleName kept for backwards compatibility only — DO NOT use for authorization logic.
-  // Use roleID + role relation instead.
-  roleName    String?  @db.VarChar(50)
-  firstName   String   @db.VarChar(50)
-  lastName    String   @db.VarChar(75)
-  password    String?  @db.VarChar(100)
-  email       String   @unique @db.VarChar(254)
-  phoneNumber String?  @db.VarChar(12)
-  avatarUrl   String?  @db.VarChar(255)
-  createdAt   DateTime @default(now()) @db.Timestamp(6)
-  birthDate   DateTime @db.Date
-  gender      Gender?  @default(male)
-  address     String?
-  is_active   Boolean  @default(true)
-  DisplayID   String?  @unique @db.VarChar(8)
-
-  // Optional professional fields (formerly split across Doctor/Staff/Pharmacist/Manager sub-tables)
-  startDate    DateTime?     @db.Date
-  doctorStatus DoctorStatus?
-  staffNote    String?       @db.VarChar(255)
-
-  roleID String? @db.Uuid
-  role   Role?   @relation(fields: [roleID], references: [roleID], onDelete: Restrict)
-
-  refreshTokens RefreshToken[]
-  patient       Patient?
-  workspaces    AccountWorkspace[]
-
-  // Relations as the actor (formerly sub-table ID = accountID)
-  timetables                Timetable[]       @relation("AccountTimetables")
-  examineLogs               ExamineLog[]      @relation("AccountExamineLogs")
-  prescriptionsAsDoctor     Prescription[]    @relation("PrescriptionDoctor")
-  prescriptionsAsPharmacist Prescription[]    @relation("PrescriptionPharmacist")
-  imexLogs                  ImexMedicineLog[]
-  approvedAppointments      Appointment[]     @relation("AppointmentApprovedBy")
-  doctorAppointments        Appointment[]     @relation("AppointmentDoctor")
-
-  @@map("Account")
-}
-
-// AccountWorkspace: maps an account to a room and/or faculty (replaces Pharmacist.roomID and Doctor.fromFaculty)
-model AccountWorkspace {
-  workspaceID String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  accountID   String  @db.Uuid
-  roomID      String? @db.Uuid
-  facultyID   String? @db.Uuid
-
-  account Account  @relation(fields: [accountID], references: [accountID], onDelete: Cascade)
-  room    Room?    @relation(fields: [roomID], references: [roomID], onDelete: SetNull)
-  faculty Faculty? @relation(fields: [facultyID], references: [facultyID], onDelete: SetNull)
-
-  @@map("AccountWorkspace")
-}
-
-model Patient {
-  patientID String @id @db.Uuid
-
-  // Tiền sử bệnh nền
-  previousRecord String?
-
-  account          Account          @relation(fields: [patientID], references: [accountID], onDelete: Cascade)
-  appointments     Appointment[]
-  enterTickets     EnterTicket[]
-  examineLogs      ExamineLog[]
-  testLogs         TestLog[]
-  paymentHistories PaymentHistory[]
-  prescriptions    Prescription[]   @relation("PrescriptionPatient")
-
-  @@map("Patient")
-}
-
-// =======================
-// Faculty / Room
-// =======================
-model Faculty {
-  facultyID          String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  facultyName        String             @unique
-  status             EntityStatus       @default(ACTIVE)
-  facultyDescription String?            @db.VarChar(255)
-  rooms              Room[]
-  workspaces         AccountWorkspace[]
-
-  @@map("Faculty")
-}
-
-model Room {
-  roomID    String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  status    EntityStatus @default(ACTIVE)
-  roomType  RoomType
-  roomName  String?      @unique @db.VarChar(10)
-  FacultyID String?      @db.Uuid
-  is_active Boolean      @default(true)
-  faculty   Faculty?     @relation(fields: [FacultyID], references: [facultyID], onDelete: Restrict)
-
-  timetables      Timetable[]
-  appointments    Appointment[]
-  enterTickets    EnterTicket[]
-  medicineTickets MedicineTicket[]
-  payments        PaymentHistory[]
-  workspaces      AccountWorkspace[]
-
-  @@map("Room")
-}
-
-// =======================
-// Timetable / Appointment
-// =======================
-model Timetable {
-  timeID    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  accountID String    @db.Uuid // formerly doctorID
-  roomID    String    @db.Uuid
-  dayOfWeek DayOfWeek
-  note      String?   @db.VarChar(255)
-  createdAt DateTime  @default(now()) @db.Timestamp(6)
-
-  account Account @relation("AccountTimetables", fields: [accountID], references: [accountID], onDelete: Cascade)
-  room    Room    @relation(fields: [roomID], references: [roomID], onDelete: Cascade)
-
-  @@map("Timetable")
-}
-
-model Appointment {
-  appointmentID        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  appointmentDisplayID String          @unique @db.VarChar(8)
-  appointmentType      AppointmentType @default(examine)
-  scheduleDate         DateTime        @db.Date
-
-  roomID     String? @db.Uuid
-  patientID  String  @db.Uuid
-  approvedBy String? @db.Uuid // FK → Account
-  doctorID   String? @db.Uuid // FK → Account
-
-  reason String? @default("")
-
-  status        AppointmentStatus @default(pending)
-  depositStatus DepositStatus     @default(unpaid)
-  createdAt     DateTime          @default(now()) @db.Timestamp(6)
-
-  room              Room?         @relation(fields: [roomID], references: [roomID], onDelete: SetNull)
-  patient           Patient       @relation(fields: [patientID], references: [patientID], onDelete: Cascade)
-  approvedByAccount Account?      @relation("AppointmentApprovedBy", fields: [approvedBy], references: [accountID], onDelete: SetNull)
-  doctor            Account?      @relation("AppointmentDoctor", fields: [doctorID], references: [accountID], onDelete: SetNull)
-  enterTickets      EnterTicket[]
-  @@map("Appointment")
-}
-
-// =======================
-// EnterTicket / Examine
-// =======================
-model EnterTicket {
-  ticketID      String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  orderNum      Int
-  appointmentID String       @db.Uuid
-  patientID     String       @db.Uuid
-  roomID        String       @db.Uuid
-  checkIn       DateTime     @default(now()) @db.Timestamp(6)
-  status        TicketStatus @default(pending)
-  note          String?      @db.VarChar(255)
-  appointment Appointment @relation(fields: [appointmentID], references: [appointmentID], onDelete: Cascade)
-  patient     Patient     @relation(fields: [patientID], references: [patientID], onDelete: Cascade)
-  room        Room        @relation(fields: [roomID], references: [roomID], onDelete: Restrict)
-  examineLogs       ExamineLog[]
-  @@map("EnterTicket")
-}
-
-model Disease {
-  diseaseID   String  @id @db.VarChar(5)
-  diseaseName String  @db.VarChar(255)
-  note        String? @db.VarChar(255)
-
-  details ExamineLogDetails[]
-
-  @@map("Disease")
-}
-
-model ExamineLog {
-  examineID     String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  enterTicketID String        @db.Uuid
-  patientID     String        @db.Uuid
-  symptoms      String        @db.VarChar(255)
-  examinedBy    String        @db.Uuid // FK → Account
-  createdAt     DateTime      @default(now()) @db.Timestamp(6)
-  status        ExamineStatus @default(draft)
-
-  sequence         Int     @default(autoincrement())
-  examineDisplayID String? @unique @db.VarChar(12)
-
-  // Health metrics
-  height Int?
-  weight Int?
-  blood  BloodType?
-
-  treatmentPlan String? @db.VarChar(255)
-  note          String? @db.VarChar(255)
-  patient     Patient     @relation(fields: [patientID], references: [patientID], onDelete: Cascade)
-  doctor      Account     @relation("AccountExamineLogs", fields: [examinedBy], references: [accountID], onDelete: Restrict)
-  enterTicket EnterTicket @relation(fields: [enterTicketID], references: [ticketID], onDelete: Restrict)
-  details      ExamineLogDetails[]
-  tests        TestLog[]
-  prescription Prescription?
-
-  @@map("ExamineLog")
-}
-
-model ExamineLogDetails {
-  examineID String  @db.Uuid
-  diseaseID String  @db.VarChar(5)
-  note      String? @db.VarChar(255)
-
-  examine ExamineLog @relation(fields: [examineID], references: [examineID], onDelete: Cascade)
-  disease Disease    @relation(fields: [diseaseID], references: [diseaseID], onDelete: Restrict)
-
-  @@id([examineID, diseaseID])
-  @@map("ExamineLogDetails")
-}
-
-// =======================
-// Test / TestLog
-// =======================
-model Test {
-  serviceID String  @id @db.VarChar(5)
-  price     Decimal @default(0) @db.Decimal(12, 2)
-  testName  String  @db.VarChar(255)
-  note      String? @db.VarChar(255)
-
-  details TestDetails[]
-
-  @@map("Test")
-}
-
-model TestLog {
-  testID    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  examineID String   @db.Uuid
-  patientID String   @db.Uuid
-  createdAt DateTime @default(now()) @db.Timestamp(6)
-  note      String?  @db.VarChar(255)
-
-  examine ExamineLog @relation(fields: [examineID], references: [examineID], onDelete: Cascade)
-  patient Patient    @relation(fields: [patientID], references: [patientID], onDelete: Cascade)
-
-  details TestDetails[]
-
-  @@map("TestLog")
-}
-
-model TestDetails {
-  testID    String @db.Uuid
-  serviceID String @db.VarChar(5)
-
-  testLog TestLog @relation(fields: [testID], references: [testID], onDelete: Cascade)
-  test    Test    @relation(fields: [serviceID], references: [serviceID], onDelete: Restrict)
-
-  @@id([testID, serviceID])
-  @@map("TestDetails")
-}
-
-// =======================
-// Medicine / Prescription
-// =======================
-model MedicineUnit {
-  unitID   Int        @id @default(autoincrement())
-  unitName String     @unique @db.VarChar(50)
-
-  medicines Medicine[]
-
-  @@map("MedicineUnit")
-}
-
-model MedicineUsage {
-  id    Int    @id @default(autoincrement())
-  usage String @unique @db.VarChar(255)
-
-  @@map("MedicineUsage")
-}
-
-model Medicine {
-  medicineID    Int     @id @default(autoincrement())
-  medicineName  String  @unique @db.VarChar(255)
-  medicineImage String? @db.VarChar(255)
-  unitID        Int
-  quantity      Int     @default(0)
-  price         Decimal @default(0) @db.Decimal(12, 2)
-  description   String? @db.Text
-  createdAt     DateTime @default(now()) @db.Timestamp(6)
-
-  unit         MedicineUnit         @relation(fields: [unitID], references: [unitID])
-  details      PrescriptionDetails[]
-  monthReports MedicineMonthReport[]
-  imexDetails  ImexMedicineDetails[]
-
-  @@map("Medicine")
-}
-
-model Prescription {
-  prescriptionID        String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  prescriptionDisplayID String?
-  examineID             String             @unique @db.Uuid
-  doctorID              String             @db.Uuid // FK → Account
-  pharmacistID          String?            @db.Uuid // FK → Account
-  patientID             String?            @db.Uuid
-  createdAt             DateTime           @default(now()) @db.Timestamp(6)
-  payAmount             Decimal?           @default(0) @db.Decimal(12, 2)
-  note                  String?            @db.VarChar(255)
-  status                PrescriptionStatus @default(draft)
-
-  needReExamine      Boolean @default(true)
-  totalTreatmentDays Int     @default(0)
-
-  examine    ExamineLog @relation(fields: [examineID], references: [examineID], onDelete: Cascade)
-  doctor     Account    @relation("PrescriptionDoctor", fields: [doctorID], references: [accountID], onDelete: Restrict)
-  pharmacist Account?   @relation("PrescriptionPharmacist", fields: [pharmacistID], references: [accountID], onDelete: SetNull)
-  patient    Patient?   @relation("PrescriptionPatient", fields: [patientID], references: [patientID], onDelete: Cascade)
-
-  details PrescriptionDetails[]
-  tickets MedicineTicket[]
-
-  @@map("Prescription")
-}
-
-model PrescriptionDetails {
-  prescriptionID String  @db.Uuid
-  medicineID     Int
-  quantity       Int     @default(0)
-  usage          String  @db.VarChar(255)
-  note           String? @db.VarChar(255)
-
-  prescription Prescription @relation(fields: [prescriptionID], references: [prescriptionID], onDelete: Cascade)
-  medicine     Medicine     @relation(fields: [medicineID], references: [medicineID], onDelete: Restrict)
-
-  @@id([prescriptionID, medicineID])
-  @@map("PrescriptionDetails")
-}
-
-model MedicineTicket {
-  ticketID       String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  prescriptionID String               @db.Uuid
-  orderNum       Int
-  roomID         String               @db.Uuid
-  status         MedicineTicketStatus @default(pending)
-  createdAt      DateTime             @default(now()) @db.Timestamp(6)
-  note           String?              @db.VarChar(255)
-
-  prescription Prescription @relation(fields: [prescriptionID], references: [prescriptionID], onDelete: Cascade)
-  room         Room         @relation(fields: [roomID], references: [roomID], onDelete: Restrict)
-
-  @@map("MedicineTicket")
-}
-
-// =======================
-// Imex logs
-// =======================
-model ImexMedicineLog {
-  imexID    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  imexType  ImexType
-  accountID String   @db.Uuid // formerly pharmacistID, now FK → Account
-  value     Decimal? @default(0) @db.Decimal(12, 2)
-  createdAt DateTime @default(now()) @db.Timestamp(6)
-  note      String?  @db.VarChar(255)
-
-  account Account               @relation(fields: [accountID], references: [accountID], onDelete: Restrict)
-  details ImexMedicineDetails[]
-
-  @@map("ImexMedicineLog")
-}
-
-model ImexMedicineDetails {
-  imexID     String  @db.Uuid
-  medicineID Int
-  quantity   Int     @default(0)
-  note       String? @db.VarChar(255)
-
-  log      ImexMedicineLog @relation(fields: [imexID], references: [imexID], onDelete: Cascade)
-  medicine Medicine        @relation(fields: [medicineID], references: [medicineID], onDelete: Restrict)
-
-  @@id([imexID, medicineID])
-  @@map("ImexMedicineDetails")
-}
-
-// =======================
-// Payment
-// =======================
-model PaymentHistory {
-  paymentID     String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  paymentMethod PaymentMethod
-  paymentAmount Decimal?      @default(0) @db.Decimal(12, 2)
-  patientID     String        @db.Uuid
-  roomID        String?       @db.Uuid
-  status        PaymentStatus @default(unpaid)
-  service       ServiceType
-  createdAt     DateTime      @default(now()) @db.Timestamp(6)
-
-  patient Patient @relation(fields: [patientID], references: [patientID], onDelete: Cascade)
-  room    Room?   @relation(fields: [roomID], references: [roomID], onDelete: SetNull)
-
-  @@map("PaymentHistory")
-}
-
-// =======================
-// Reports
-// =======================
-model MedicineMonthReport {
-  year       Int
-  month      Int
-  medicineID Int
-  useCount   Int @default(0)
-
-  medicine Medicine @relation(fields: [medicineID], references: [medicineID], onDelete: Cascade)
-
-  @@id([year, month, medicineID])
-  @@map("MedicineMonthReport")
-}
-
-model PaymentMonthReport {
-  year         Int
-  month        Int
-  date         Int
-  patientCount Int?     @default(0)
-  revenue      Decimal? @default(0) @db.Decimal(22, 2)
-
-  @@id([year, month, date])
-  @@map("PaymentMonthReport")
-}
-
-model Notification {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title       String   @db.VarChar(255)
-  description String?  @db.VarChar(255)
-  link        String?  @db.VarChar(255)
-  isRead      Boolean  @default(false)
+  expiresAt   DateTime @db.Timestamptz(3)
   createdAt   DateTime @default(now()) @db.Timestamptz(3)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("RefreshToken")
 }
 
-// =======================
-// Config
-// =======================
-model SystemConfig {
-  key         String  @id @db.VarChar(50) // VD: "MAX_PATIENTS_PER_DAY"
-  value       String  @db.Text
-  description String?
+// ========================
+// ENUMS
+// ========================
 
-  @@map("SystemConfig")
+
+enum UserRole {
+  USER    // Người dùng app
+  FARMER  // Nhà vườn
+  ADMIN   // Quản trị viên
+}
+
+/// Vòng đời cây từ gieo hạt đến nở hoa
+enum PlantStatus {
+  SEED        // Hạt giống mới gieo
+  SPROUT      // Đang nảy mầm
+  GROWING     // Đang sinh trưởng
+  BUDDING     // Đang hình thành nụ
+  BLOOMING    // Đang nở hoa
+  RESTING     // Nghỉ ngơi / không phát triển
+  NEEDS_CARE  // Cần chăm sóc khẩn cấp
+  COMPLETED   // Hoàn thành vòng đời
+}
+
+/// Mức độ cảm xúc của user
+enum MoodLevel {
+  VERY_BAD  // Rất tệ
+  BAD       // Tệ
+  NORMAL    // Bình thường
+  GOOD      // Tốt
+  VERY_GOOD // Rất tốt
+}
+
+/// Trạng thái duyệt vườn
+enum GardenStatus {
+  PENDING   // Chờ admin duyệt
+  APPROVED  // Đã được duyệt
+  REJECTED  // Bị từ chối
+}
+
+/// Loại nhiệm vụ chăm sóc nhỏ hàng ngày
+enum CareTaskType {
+  WATER_PLANT   // Tưới cây ảo
+  BREATHING     // Thở chậm 1 phút
+  DRINK_WATER   // Uống một ly nước
+  WRITE_JOURNAL // Viết một dòng nhật ký
+  LISTEN_SOUND  // Nghe âm thanh thư giãn
+  SHORT_WALK    // Đi dạo ngắn
+}
+
+// ========================
+// NHÓM TÀI KHOẢN
+// ========================
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique @db.VarChar(254)
+  passwordHash String   @db.VarChar(255)
+  fullName     String?  @db.VarChar(150)
+  avatarUrl    String?  @db.VarChar(500)
+  role         UserRole @default(USER)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+
+  // FARMER: quản lý nhiều vườn
+  gardens      Garden[]      @relation("FarmerGardens")
+  // FARMER: cập nhật ảnh/tình trạng cây thật
+  plantUpdates PlantUpdate[] @relation("FarmerPlantUpdates")
+
+  // USER: trồng cây ảo, ghi nhật ký, làm task
+  virtualPlants VirtualPlant[]
+  moodJournals  MoodJournal[]
+  careTaskLogs  CareTaskLog[]
+  refreshTokens RefreshToken[]
+  devices       UserDevice[]
+  notifications Notification[]
+
+  @@map("User")
+}
+
+// ========================
+// NHÓM NHÀ VƯỜN
+// ========================
+
+model Garden {
+  id             String       @id @default(uuid()) @db.Uuid
+  name           String       @db.VarChar(255)
+  address        String?      @db.VarChar(500)
+  description    String?      @db.Text
+  imageUrl       String?      @db.VarChar(500)
+  isActive       Boolean      @default(true)
+  status         GardenStatus @default(PENDING)   // Chờ duyệt khi farmer tạo
+  rejectedReason String?      @db.Text             // Lý do từ chối (admin điền)
+
+  farmerId String @db.Uuid
+  farmer   User   @relation("FarmerGardens", fields: [farmerId], references: [id], onDelete: Restrict)
+
+  realPlants RealPlant[]
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([farmerId])
+  @@index([status])
+  @@map("Garden")
+}
+
+// ========================
+// NHÓM HOA / CÂY
+// ========================
+
+/// Loại hoa/cây: hoa hướng dương, lavender, sen đá, ...
+model FlowerType {
+  id              String  @id @default(uuid()) @db.Uuid
+  name            String  @unique @db.VarChar(255)
+  description     String? @db.Text
+  imageUrl        String? @db.VarChar(500)
+  defaultDuration Int?    // Số ngày dự kiến từ gieo đến nở hoa
+
+  realPlants    RealPlant[]
+  virtualPlants VirtualPlant[]
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@map("FlowerType")
+}
+
+/// Cây thật ngoài vườn của nhà vườn
+model RealPlant {
+  id   String @id @default(uuid()) @db.Uuid
+  code String @unique @db.VarChar(50) // VD: SUNFLOWER-001
+
+  status      PlantStatus @default(SEED)
+  isAssigned  Boolean     @default(false) // true khi đã gắn với 1 VirtualPlant
+  plantedAt   DateTime?   @db.Date
+  completedAt DateTime?   @db.Date
+
+  flowerTypeId String @db.Uuid
+  flowerType   FlowerType @relation(fields: [flowerTypeId], references: [id], onDelete: Restrict)
+
+  gardenId String @db.Uuid
+  garden   Garden @relation(fields: [gardenId], references: [id], onDelete: Restrict)
+
+  // Mỗi cây thật chỉ gắn được với 1 cây ảo (MVP)
+  virtualPlant VirtualPlant?
+  updates      PlantUpdate[]
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([gardenId])
+  @@index([flowerTypeId])
+  @@index([flowerTypeId, isAssigned, status]) // Index cho query tìm cây còn trống
+  @@map("RealPlant")
+}
+
+/// Cây ảo của user trong app, gắn 1-1 với cây thật
+model VirtualPlant {
+  id          String  @id @default(uuid()) @db.Uuid
+  nickname    String? @db.VarChar(100) // Tên cây do user đặt
+
+  status      PlantStatus @default(SEED)
+  growthPoint Int         @default(0) // Điểm tăng trưởng theo thời gian & task
+  streakCount Int         @default(0) // Chuỗi ngày chăm sóc liên tiếp
+
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  flowerTypeId String     @db.Uuid
+  flowerType   FlowerType @relation(fields: [flowerTypeId], references: [id], onDelete: Restrict)
+
+  // @unique: 1 cây thật chỉ thuộc về 1 cây ảo
+  realPlantId String    @unique @db.Uuid
+  realPlant   RealPlant @relation(fields: [realPlantId], references: [id], onDelete: Restrict)
+
+  careTaskLogs CareTaskLog[]
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([userId])
+  @@index([flowerTypeId])
+  @@map("VirtualPlant")
+}
+
+/// Nhà vườn cập nhật ảnh/tình trạng cây thật mỗi 2-3 ngày
+model PlantUpdate {
+  id String @id @default(uuid()) @db.Uuid
+
+  realPlantId String    @db.Uuid
+  realPlant   RealPlant @relation(fields: [realPlantId], references: [id], onDelete: Cascade)
+
+  farmerId String @db.Uuid
+  farmer   User   @relation("FarmerPlantUpdates", fields: [farmerId], references: [id], onDelete: Restrict)
+
+  imageUrl   String      @db.VarChar(500)
+  status     PlantStatus // Trạng thái cây tại thời điểm cập nhật
+  note       String?     @db.Text   // Mô tả chung
+  healthNote String?     @db.VarChar(500) // Ghi chú tình trạng sức khỏe cây
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([realPlantId, createdAt]) // Timeline query
+  @@index([farmerId])
+  @@map("PlantUpdate")
+}
+
+// ========================
+// NHÓM HỖ TRỢ TINH THẦN
+// ========================
+
+/// Nhật ký cảm xúc hàng ngày của user
+model MoodJournal {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  mood MoodLevel
+  note String?   @db.Text // Ghi chú cảm xúc
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([userId])
+  @@map("MoodJournal")
+}
+
+/// Danh sách nhiệm vụ chăm sóc nhỏ (do admin tạo hoặc mặc định)
+model CareTask {
+  id          String       @id @default(uuid()) @db.Uuid
+  title       String       @db.VarChar(255)
+  description String?      @db.Text
+  type        CareTaskType
+  isDefault   Boolean      @default(true) // Task hệ thống hay task tùy chỉnh
+  isActive    Boolean      @default(true)
+
+  logs CareTaskLog[]
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@map("CareTask")
+}
+
+/// Lịch sử user đã hoàn thành task nào trong ngày
+model CareTaskLog {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Task có thể gắn hoặc không gắn với cây ảo cụ thể
+  virtualPlantId String?       @db.Uuid
+  virtualPlant   VirtualPlant? @relation(fields: [virtualPlantId], references: [id], onDelete: SetNull)
+
+  careTaskId String   @db.Uuid
+  careTask   CareTask @relation(fields: [careTaskId], references: [id], onDelete: Restrict)
+
+  // taskDate lưu đầu ngày (00:00:00) để dễ check unique theo ngày
+  taskDate    DateTime @db.Date
+  completedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  // Mỗi user chỉ được hoàn thành 1 task 1 lần mỗi ngày
+  @@unique([userId, careTaskId, taskDate])
+  @@index([userId])
+  @@index([virtualPlantId])
+  @@index([careTaskId])
+  @@map("CareTaskLog")
+}
+
+// ========================
+// THIẾT BỊ & THÔNG BÁO
+// ========================
+
+/// Lưu FCM token theo từng thiết bị (hỗ trợ multi-device)
+model UserDevice {
+  id       String  @id @default(uuid()) @db.Uuid
+  userId   String  @db.Uuid
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  fcmToken String  @unique @db.VarChar(500)
+  platform String? @db.VarChar(50) // ios | android | web
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([userId])
+  @@map("UserDevice")
+}
+
+/// Thông báo trong app gửi tới từng user
+model Notification {
+  id     String  @id @default(uuid()) @db.Uuid
+  userId String  @db.Uuid
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title  String  @db.VarChar(255)
+  body   String  @db.Text
+  type   String? @db.VarChar(50) // plant_update | task_reminder | system
+  isRead Boolean @default(false)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("Notification")
 }

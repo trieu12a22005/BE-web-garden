@@ -1,45 +1,29 @@
 import { Router, type Request, type Response } from "express";
-import authRoutes from "./auth/auth.route.js";
-import adminAccountRoutes from "./admin/account/account.route.js";
-import adminReportRoutes from "./admin/report/report.route.js";
-import userRoutes from "./user/user.route.js";
-import roleRoutes from "./role/role.route.js";
-import permissionRoutes from "./permission/permission.route.js";
-import facyltyRoutes from "./admin/Faculty/faculty.route.js";
-import RoomRoutes from "./admin/room/room.route.js";
-import TimetableRoutes from "./admin/timetable/timetable.route.js";
-import AppointmentRoutes from "./admin/appointment/appoint.route.js";
-import medicineRoutes from "./medicine/medicine.route.js";
-import ExamineRouter from "./examine/examine.route.js";
 import { paginateMiddleware } from "../middlewares/paginate.js";
-import PrescriptionRouter from "./prescription/prescription.route.js";
-import TestRouter from "./test/test.route.js";
-import notificationRoutes from "./notification/notification.route.js";
-import systemConfigRoutes from "./admin/systemConfig/systemConfig.route.js";
+import authRoutes from "./auth/auth.route.js";
+import flowerTypeRoutes from "./flower-type/flowerType.route.js";
+import gardenRoutes from "./garden/garden.route.js";
+import realPlantRoutes from "./real-plant/realPlant.route.js";
+import virtualPlantRoutes from "./virtual-plant/virtualPlant.route.js";
+import plantUpdateRoutes from "./plant-update/plantUpdate.route.js";
+import moodJournalRoutes from "./mood-journal/moodJournal.route.js";
+import careTaskRoutes from "./care-task/careTask.route.js";
+
 const router = Router();
 
-// Setup custom output for specific routes
 router.use(paginateMiddleware);
 
-router.get("/", (req: Request, res: Response) => {
-  res.json({ message: "Welcome to the API" });
+router.get("/", (_req: Request, res: Response) => {
+  res.json({ message: "Garden-BE API v1" });
 });
-router.use("/auth", authRoutes);
-router.use("/user", userRoutes);
-router.use("/admin/account", adminAccountRoutes);
-router.use("/admin/report", adminReportRoutes);
-router.use("/admin/faculty", facyltyRoutes);
-router.use("/admin/role", roleRoutes);
-router.use("/admin/permission", permissionRoutes);
-router.use("/admin/rooms", RoomRoutes);
-router.use("/admin/timetables", TimetableRoutes);
-router.use("/admin/appointments", AppointmentRoutes);
-router.use("/medicine", medicineRoutes);
 
-router.use("/examine", ExamineRouter);
-router.use("/prescription", PrescriptionRouter);
-router.use("/notification", notificationRoutes);
-router.use("/admin/config", systemConfigRoutes);
-// For testing purposes, you can add a route to check if the API is working
-router.use("/test", TestRouter);
+router.use("/auth", authRoutes);
+router.use("/flower-types", flowerTypeRoutes);
+router.use("/gardens", gardenRoutes);
+router.use("/real-plants", realPlantRoutes);
+router.use("/virtual-plants", virtualPlantRoutes);
+router.use("/plant-updates", plantUpdateRoutes);
+router.use("/mood-journals", moodJournalRoutes);
+router.use("/care-tasks", careTaskRoutes);
+
 export default router;

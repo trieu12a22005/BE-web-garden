@@ -1,191 +1,94 @@
 import { Router } from "express";
-import {  GetProfile, loginUser,refreshTokens,updatePassword, UpdateProfile } from "./auth.controller.js";
-import { verifyAccessToken, verifyRefreshToken } from "../../middlewares/verifyToken.js";
-import { logout } from "./auth.controller.js";
-import { validateBody,   } from "../../middlewares/validate.js";
-import { UpdateAccountSchema } from "../../schema/auth.schema.js";
+import { authenticate } from "../../middlewares/auth.middleware.js";
+import { validateBody } from "../../middlewares/validate.middleware.js";
+import {
+  register, login, getMe, updateProfile, updatePassword, refresh, logout,
+} from "./auth.controller.js";
+import {
+  registerSchema, loginSchema, updateProfileSchema, updatePasswordSchema,
+} from "./auth.schema.js";
+
 const router = Router();
+
+/**
+ * @swagger
+ * tags:
+ *   name: Auth
+ *   description: Authentication endpoints
+ */
+
+/**
+ * @swagger
+ * /auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               fullName:
+ *                 type: string
+ *               avatarUrl:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Registered successfully
+ */
+router.post("/register", validateBody(registerSchema), register);
 
 /**
  * @swagger
  * /auth/login:
  *   post:
- *     summary: User login
- *     description: Authenticate user with email and password
- *     tags:
- *       - Authentication
+ *     summary: Login a user
+ *     tags: [Auth]
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [email, password]
  *             properties:
  *               email:
  *                 type: string
- *                 example: "user@example.com"
  *               password:
  *                 type: string
- *                 example: "password123"
- *             required:
- *               - email
- *               - password
  *     responses:
  *       200:
  *         description: Login successful
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                 user:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: integer
- *                     role:
- *                       type: string
- *       401:
- *         description: Invalid credentials
- *       500:
- *         description: Internal server error
  */
-router.post("/login", loginUser);
+router.post("/login", validateBody(loginSchema), login);
 
 /**
  * @swagger
- * /auth/refresh:
- *   post:
- *     summary: Refresh access token
- *     description: Refresh the access token using the refresh token via HTTP-only cookies. No request body needed.
- *     tags:
- *       - Authentication
- *     responses:
- *       200:
- *         description: Access token refreshed successfully. New tokens are set in HTTP-only cookies.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Token refreshed"
- *       401:
- *         description: Unauthorized - Invalid or expired refresh token
- *       500:
- *         description: Internal server error
- */
-router.post("/refresh", verifyRefreshToken, refreshTokens);
-
-
-/**
- * @swagger
- * /auth/update-password:
- *   patch:
- *     summary: Update user password
- *     description: Allows authenticated user to update their password
- *     tags:
- *       - Authentication
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               currentPassword:
- *                 type: string
- *                 example: "oldpassword123"
- *               newPassword:
- *                 type: string
- *                 example: "newpassword123"
- *             required:
- *               - currentPassword
- *               - newPassword
- *     responses:
- *       200:
- *         description: Password updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Password updated successfully"
- *       400:
- *         description: Bad request - Missing required fields
- *       401:
- *         description: Unauthorized or current password is incorrect
- *       500:
- *         description: Internal server error
- */
-router.patch("/update-password", verifyAccessToken,updatePassword)
-/**
- * @swagger
- * /auth/profile:
+ * /auth/me:
  *   get:
- *     summary: Get user profile
- *     description: Retrieve the authenticated user's profile information
- *     tags:
- *       - Authentication
+ *     summary: Get current logged in user
+ *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Profile retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 user:
- *                   type: object
- *                   properties:
- *                     accountID:
- *                       type: integer
- *                       example: 1
- *                     email:
- *                       type: string
- *                       example: "user@example.com"
- *                     firstName:
- *                       type: string
- *                       example: "John"
- *                     lastName:
- *                       type: string
- *                       example: "Doe"
- *                     role:
- *                       type: string
- *                       example: "user"
- *                     birthDate:
- *                       type: string
- *                       format: date
- *                       example: "1990-01-01"
- *                     phoneNumber:
- *                       type: string
- *                       example: "+1234567890"
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: User not found
- *       500:
- *         description: Internal server error
+ *         description: Current user info
  */
-router.get("/profile", verifyAccessToken, GetProfile)
+router.get("/me", authenticate, getMe);
 
 /**
  * @swagger
  * /auth/update-profile:
  *   patch:
- *     summary: Update user profile
- *     description: Update the authenticated user's profile information
- *     tags:
- *       - Authentication
+ *     summary: Update profile details
+ *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -195,61 +98,66 @@ router.get("/profile", verifyAccessToken, GetProfile)
  *           schema:
  *             type: object
  *             properties:
- *               firstName:
+ *               fullName:
  *                 type: string
- *                 example: "John"
- *               lastName:
+ *               avatarUrl:
  *                 type: string
- *                 example: "Doe"
- *               birthDate:
- *                 type: string
- *                 format: date
- *                 example: "1990-01-01"
- *               phoneNumber:
- *                 type: string
- *                 example: "+1234567890"
  *     responses:
  *       200:
- *         description: Profile updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Profile updated successfully"
- *       401:
- *         description: Unauthorized
- *       500:
- *         description: Internal server error
+ *         description: Profile updated
  */
-router.patch("/update-profile", verifyAccessToken,validateBody(UpdateAccountSchema), UpdateProfile)
+router.patch("/update-profile", authenticate, validateBody(updateProfileSchema), updateProfile);
+
+/**
+ * @swagger
+ * /auth/update-password:
+ *   patch:
+ *     summary: Update account password
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [currentPassword, newPassword]
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password updated
+ */
+router.patch("/update-password", authenticate, validateBody(updatePasswordSchema), updatePassword);
+
+/**
+ * @swagger
+ * /auth/refresh:
+ *   post:
+ *     summary: Refresh access token via cookie
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: Token refreshed successfully
+ */
+router.post("/refresh", refresh);
+
 /**
  * @swagger
  * /auth/logout:
- *   get:
+ *   post:
  *     summary: Logout user
- *     description: Logs out the authenticated user by clearing tokens
- *     tags:
- *       - Authentication
+ *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Logged out successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Logged out successfully"
- *       401:
- *         description: Unauthorized
- *       500:
- *         description: Internal server error
+ *         description: Logged out
  */
-router.get("/logout",verifyAccessToken, logout)
+router.post("/logout", authenticate, logout);
+
 export default router;

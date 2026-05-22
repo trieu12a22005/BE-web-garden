@@ -1,6 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
 
-// Custom pagination output
 export async function paginateMiddleware(req: Request, res: Response, next: NextFunction) {
   res.paginate = (data: unknown[], pagination) => {
     return res.status(200).json({

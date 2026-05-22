@@ -1,6 +1,7 @@
 import "dotenv/config";
 import app from "./server.js";
 import prisma from "./utils/prisma.js";
+
 const PORT = process.env.PORT || 3000;
 
 async function startServer() {
@@ -12,6 +13,7 @@ async function startServer() {
 
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
+      console.log(`Swagger Docs available at http://localhost:${PORT}/api-docs`);
     });
 
     const shutdown = async () => {

@@ -1,5 +1,5 @@
 {
-  "name": "clinic_web_server",
+  "name": "garden-be",
   "version": "1.0.0",
   "description": "",
   "license": "ISC",
@@ -62,5 +62,8 @@
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.54.0"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }

@@ -1,5 +1,4 @@
 import "express";
-import { Account, Faculty, Room } from "../generated/prisma/index.js";
 
 declare global {
   namespace Express {
@@ -7,7 +6,6 @@ declare global {
       id: string;
       role?: string;
       email?: string;
-      permissions?: string[]; // New field for RBAC (breaking changes)
     }
     interface Pagination {
       totalItems: number;
@@ -17,16 +15,8 @@ declare global {
     }
     interface Request {
       user?: User;
-      currentRole?: string;
       id?: string | null;
-      userAccount?: Account;
-      room?: Room;
-      faculty?: Faculty;
-
-      // For update validation middleware
-      targetItem?: unknown;
     }
-
     interface Response {
       paginate: (data: unknown[], pagination: Pagination) => void;
     }
