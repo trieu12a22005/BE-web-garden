@@ -8,14 +8,21 @@ import { setupSwagger } from "./swagger.js";
 
 const app = express();
 
+const isDev = process.env.NODE_ENV !== "production";
+
 const corsOptions = {
-  origin: ["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"],
+  // Dev: cho phép tất cả origins (mobile app không có origin cố định)
+  // Production: liệt kê cụ thể
+  origin: isDev
+    ? true  // Cho phép tất cả origins trong dev
+    : ["https://your-production-domain.com"],
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "Origin", "X-Requested-With", "Accept"],
   credentials: true,
   optionsSuccessStatus: 200,
   maxAge: 86400,
 };
+
 
 app.use(cors(corsOptions));
 app.use(cookieParser());

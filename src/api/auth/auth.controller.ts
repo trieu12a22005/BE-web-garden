@@ -62,6 +62,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
     return res.status(200).json({
       message: "Login successful",
+      accessToken, // Mobile lưu vào SecureStore
       user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role },
     });
   } catch (err) {
@@ -146,7 +147,10 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
     res.cookie("accessToken", accessToken, COOKIE_OPTS(60 * 60 * 1000));
     res.cookie("refreshToken", refreshToken, COOKIE_OPTS(7 * 24 * 60 * 60 * 1000));
 
-    return res.status(200).json({ message: "Token refreshed" });
+    return res.status(200).json({
+      message: "Token refreshed",
+      accessToken, // Mobile cần để cập nhật SecureStore
+    });
   } catch (err) {
     next(err);
   }

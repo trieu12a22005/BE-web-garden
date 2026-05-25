@@ -8,6 +8,7 @@ import virtualPlantRoutes from "./virtual-plant/virtualPlant.route.js";
 import plantUpdateRoutes from "./plant-update/plantUpdate.route.js";
 import moodJournalRoutes from "./mood-journal/moodJournal.route.js";
 import careTaskRoutes from "./care-task/careTask.route.js";
+import notificationRoutes from "./notification/notification.route.js";
 
 const router = Router();
 
@@ -25,5 +26,6 @@ router.use("/virtual-plants", virtualPlantRoutes);
 router.use("/plant-updates", plantUpdateRoutes);
 router.use("/mood-journals", moodJournalRoutes);
 router.use("/care-tasks", careTaskRoutes);
+router.use("/notifications", notificationRoutes);
 
 export default router;

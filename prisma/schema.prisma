@@ -77,6 +77,23 @@ enum CareTaskType {
   SHORT_WALK    // Đi dạo ngắn
 }
 
+/// Loại xác nhận hoàn thành nhiệm vụ
+enum VerifyType {
+  SELF_CONFIRM   // Tự xác nhận
+  TIMER          // Đếm ngược
+  OPTIONAL_PHOTO // Ảnh tuỳ chọn
+}
+
+/// Tài nguyên thưởng cho cây ảo
+enum ResourceType {
+  WATER
+  SUNLIGHT
+  FERTILIZER
+  AIR
+  LOVE
+  DEW
+}
+
 // ========================
 // NHÓM TÀI KHOẢN
 // ========================
@@ -262,8 +279,15 @@ model CareTask {
   title       String       @db.VarChar(255)
   description String?      @db.Text
   type        CareTaskType
-  isDefault   Boolean      @default(true) // Task hệ thống hay task tùy chỉnh
+  isDefault   Boolean      @default(true)
   isActive    Boolean      @default(true)
+
+  // Mobile gameplay fields
+  rewardResource  ResourceType @default(WATER)  // Loại tài nguyên thưởng
+  rewardAmount    Int          @default(10)      // Số lượng tài nguyên thưởng
+  growthReward    Int          @default(5)       // Điểm phát triển thưởng
+  verifyType      VerifyType   @default(SELF_CONFIRM) // Cách xác nhận
+  durationSeconds Int?                           // Thời gian đếm ngược (TIMER)
 
   logs CareTaskLog[]
 
