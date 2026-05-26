@@ -289,6 +289,9 @@ model CareTask {
   verifyType      VerifyType   @default(SELF_CONFIRM) // Cách xác nhận
   durationSeconds Int?                           // Thời gian đếm ngược (TIMER)
 
+  // Hoạt ảnh nhân vật riêng cho từng task (upload lên Cloudinary)
+  characterImageUrl String? @db.VarChar(500)
+
   logs CareTaskLog[]
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
