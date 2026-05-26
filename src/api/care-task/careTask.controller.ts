@@ -39,7 +39,9 @@ export const getAll = async (req: Request, res: Response, next: NextFunction) =>
       const a = [...arr];
       for (let i = a.length - 1; i > 0; i--) {
         const j = Math.floor(rand() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
+        const temp = a[i];
+        a[i] = a[j] as T;
+        a[j] = temp as T;
       }
       return a;
     };
@@ -50,8 +52,9 @@ export const getAll = async (req: Request, res: Response, next: NextFunction) =>
     for (const rt of RESOURCE_TYPES) {
       const group = shuffle(byResource.get(rt) ?? []);
       if (group.length > 0) {
-        selected.push(group[0]);
-        usedIds.add(group[0].id);
+        const first = group[0]!;
+        selected.push(first);
+        usedIds.add(first.id);
       }
     }
 

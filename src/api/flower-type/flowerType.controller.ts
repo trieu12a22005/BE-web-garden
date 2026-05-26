@@ -12,7 +12,7 @@ export const getAll = async (req: Request, res: Response, next: NextFunction) =>
 // GET /api/flower-types/:id
 export const getOne = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const type = await prisma.flowerType.findUnique({ where: { id: req.params.id } });
+    const type = await prisma.flowerType.findUnique({ where: { id: req.params.id as string } });
     if (!type) return res.status(404).json({ message: "FlowerType not found" });
     return res.status(200).json({ data: type });
   } catch (err) { next(err); }
@@ -31,7 +31,7 @@ export const create = async (req: Request, res: Response, next: NextFunction) =>
 export const update = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const type = await prisma.flowerType.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: req.body,
     });
     return res.status(200).json({ message: "FlowerType updated", data: type });
@@ -41,7 +41,7 @@ export const update = async (req: Request, res: Response, next: NextFunction) =>
 // DELETE /api/flower-types/:id  [ADMIN]
 export const remove = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await prisma.flowerType.delete({ where: { id: req.params.id } });
+    await prisma.flowerType.delete({ where: { id: req.params.id as string } });
     return res.status(200).json({ message: "FlowerType deleted" });
   } catch (err) { next(err); }
 };
