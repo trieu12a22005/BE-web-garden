@@ -9,6 +9,7 @@ import plantUpdateRoutes from "./plant-update/plantUpdate.route.js";
 import moodJournalRoutes from "./mood-journal/moodJournal.route.js";
 import careTaskRoutes from "./care-task/careTask.route.js";
 import notificationRoutes from "./notification/notification.route.js";
+import userRoutes from "./user/user.route.js";
 
 const router = Router();
 
@@ -19,6 +20,7 @@ router.get("/", (_req: Request, res: Response) => {
 });
 
 router.use("/auth", authRoutes);
+router.use("/admin/users", userRoutes);
 router.use("/flower-types", flowerTypeRoutes);
 router.use("/gardens", gardenRoutes);
 router.use("/real-plants", realPlantRoutes);
@@ -27,5 +29,6 @@ router.use("/plant-updates", plantUpdateRoutes);
 router.use("/mood-journals", moodJournalRoutes);
 router.use("/care-tasks", careTaskRoutes);
 router.use("/notifications", notificationRoutes);
+
 
 export default router;
