@@ -4,10 +4,41 @@ import prisma from "../../utils/prisma.js";
 // GET /api/flower-types
 export const getAll = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const types = await prisma.flowerType.findMany({ orderBy: { name: "asc" } });
-    return res.status(200).json({ data: types });
+    const types = await prisma.flowerType.findMany({
+      orderBy: { name: "asc" },
+      include: {
+        realPlants: {
+          where: { isAssigned: false, status: "SEED" },
+          select: {
+            id: true,
+            garden: {
+              select: { id: true, name: true, address: true },
+            },
+          },
+        },
+      },
+    });
+
+    // Gom nhà vườn unique + đếm cây sẵn có cho mỗi loại
+    const result = types.map((ft) => {
+      const gardensMap = new Map<string, { id: string; name: string; address?: string | null }>();
+      for (const rp of ft.realPlants) {
+        if (!gardensMap.has(rp.garden.id)) {
+          gardensMap.set(rp.garden.id, rp.garden);
+        }
+      }
+      const { realPlants, ...rest } = ft;
+      return {
+        ...rest,
+        availableCount: realPlants.length,          // Số cây SEED chưa gắn
+        gardens: Array.from(gardensMap.values()),    // Nhà vườn có cây loại này
+      };
+    });
+
+    return res.status(200).json({ data: result });
   } catch (err) { next(err); }
 };
+
 
 // GET /api/flower-types/:id
 export const getOne = async (req: Request, res: Response, next: NextFunction) => {
@@ -21,8 +52,10 @@ export const getOne = async (req: Request, res: Response, next: NextFunction) =>
 // POST /api/flower-types  [ADMIN]
 export const create = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, description, imageUrl, defaultDuration } = req.body;
-    const type = await prisma.flowerType.create({ data: { name, description, imageUrl, defaultDuration } });
+    const { name, description, imageUrl, defaultDuration, stageImages, stageDurations } = req.body;
+    const type = await prisma.flowerType.create({
+      data: { name, description, imageUrl, defaultDuration, stageImages, stageDurations },
+    });
     return res.status(201).json({ message: "FlowerType created", data: type });
   } catch (err) { next(err); }
 };

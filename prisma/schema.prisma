@@ -161,8 +161,14 @@ model FlowerType {
   id              String  @id @default(uuid()) @db.Uuid
   name            String  @unique @db.VarChar(255)
   description     String? @db.Text
-  imageUrl        String? @db.VarChar(500)
+  imageUrl        String? @db.VarChar(500) // Ảnh đại diện chung (dùng trong danh sách chọn giống)
   defaultDuration Int?    // Số ngày dự kiến từ gieo đến nở hoa
+
+  /// Ảnh theo từng giai đoạn: { "SEED": "url", "SPROUT": "url", ... }
+  stageImages     Json?   // Map<PlantStatus, string>
+
+  /// Số ngày mỗi giai đoạn: { "SEED": 7, "SPROUT": 14, "GROWING": 21, "BUDDING": 14, "BLOOMING": 30 }
+  stageDurations  Json?   // Map<PlantStatus, number>
 
   realPlants    RealPlant[]
   virtualPlants VirtualPlant[]
@@ -208,8 +214,17 @@ model VirtualPlant {
   nickname    String? @db.VarChar(100) // Tên cây do user đặt
 
   status      PlantStatus @default(SEED)
-  growthPoint Int         @default(0) // Điểm tăng trưởng theo thời gian & task
-  streakCount Int         @default(0) // Chuỗi ngày chăm sóc liên tiếp
+  growthPoint Int         @default(0)  // Giữ lại cho streak / thành tích
+  streakCount Int         @default(0)  // Chuỗi ngày chăm sóc liên tiếp
+
+  // ── Tài nguyên tích lũy (không reset theo ngày) ─────────────────────────
+  waterAmount      Int @default(0)
+  sunlightAmount   Int @default(0)
+  fertilizerAmount Int @default(0)
+  airAmount        Int @default(0)
+  loveAmount       Int @default(0)
+  dewAmount        Int @default(0)
+  lastCaredAt      DateTime? @db.Timestamptz(3) // Lần chăm sóc gần nhất
 
   userId String @db.Uuid
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)

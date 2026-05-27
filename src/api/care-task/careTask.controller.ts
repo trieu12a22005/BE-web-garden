@@ -172,11 +172,35 @@ export const completeTask = async (req: Request, res: Response, next: NextFuncti
       include: { careTask: true },
     });
 
-    // Tăng growthPoint đúng theo growthReward của task
+    // Cập nhật tài nguyên cây ảo — increment đúng field theo rewardResource
     if (virtualPlantId) {
+      // Map ResourceType → tên field trong DB
+      const resourceField: Record<string, object> = {
+        WATER:      { waterAmount:      { increment: careTask.rewardAmount } },
+        SUNLIGHT:   { sunlightAmount:   { increment: careTask.rewardAmount } },
+        FERTILIZER: { fertilizerAmount: { increment: careTask.rewardAmount } },
+        AIR:        { airAmount:        { increment: careTask.rewardAmount } },
+        LOVE:       { loveAmount:       { increment: careTask.rewardAmount } },
+        DEW:        { dewAmount:        { increment: careTask.rewardAmount } },
+      };
+
+      const resourceUpdate = resourceField[careTask.rewardResource] ?? {};
+
+      // Streak: kiểm tra xem hôm qua user có chăm sóc không
+      const yesterday = new Date(taskDate);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayLog = await prisma.careTaskLog.findFirst({
+        where: { userId, taskDate: yesterday, virtualPlantId },
+      });
+
       await prisma.virtualPlant.update({
         where: { id: virtualPlantId },
-        data: { growthPoint: { increment: careTask.growthReward } },
+        data: {
+          ...resourceUpdate,
+          growthPoint: { increment: careTask.growthReward }, // giữ cho thành tích
+          lastCaredAt: new Date(),
+          streakCount: yesterdayLog ? { increment: 1 } : 1,
+        },
       });
     }
 
