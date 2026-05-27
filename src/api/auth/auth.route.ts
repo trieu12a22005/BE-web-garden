@@ -158,6 +158,6 @@ router.post("/refresh", refresh);
  *       200:
  *         description: Logged out
  */
-router.post("/logout", authenticate, logout);
+router.post("/logout", logout);
 
 export default router;

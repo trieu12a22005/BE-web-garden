@@ -63,6 +63,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     return res.status(200).json({
       message: "Login successful",
       accessToken, // Mobile lưu vào SecureStore
+      refreshToken, // Mobile cần lưu để dùng khi refresh (không có cookie)
       user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role },
     });
   } catch (err) {
@@ -127,7 +128,8 @@ export const updatePassword = async (req: Request, res: Response, next: NextFunc
 // POST /api/auth/refresh
 export const refresh = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const oldToken = req.cookies?.refreshToken;
+    // Cookie (web) hoặc body.refreshToken (mobile — React Native không gửi cookie)
+    const oldToken = req.cookies?.refreshToken || req.body?.refreshToken;
     if (!oldToken) return res.status(401).json({ message: "Missing refresh token" });
 
     const stored = await findRefreshToken(oldToken);
@@ -159,7 +161,8 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
 // POST /api/auth/logout
 export const logout = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const token = req.cookies?.refreshToken;
+    // Cookie (web) hoặc body.refreshToken (mobile)
+    const token = req.cookies?.refreshToken || req.body?.refreshToken;
     if (token) await deleteRefreshToken(token);
 
     res.clearCookie("accessToken", { path: "/" });
