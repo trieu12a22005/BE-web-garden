@@ -20,6 +20,7 @@ const ALLOWED_ORIGINS = [
   // Mobile (Expo) — không có origin cố định, dùng null hoặc skip
   // Production FE — cập nhật khi deploy
   "https://garden-fe.vercel.app",
+  "https://garden-fe-two.vercel.app",
   "https://garden-fe.onrender.com",
   "https://garden-admin.vercel.app",
 ];
