@@ -51,13 +51,14 @@ enum PlantStatus {
   COMPLETED   // Hoàn thành vòng đời
 }
 
-/// Mức độ cảm xúc của user
-enum MoodLevel {
-  VERY_BAD  // Rất tệ
-  BAD       // Tệ
+/// Loại cảm xúc của user (icon-based)
+enum MoodType {
+  HAPPY     // Vui
+  CALM      // Bình yên
   NORMAL    // Bình thường
-  GOOD      // Tốt
-  VERY_GOOD // Rất tốt
+  SAD       // Buồn
+  ANXIOUS   // Lo lắng
+  TIRED     // Mệt mỏi
 }
 
 /// Trạng thái duyệt vườn
@@ -281,12 +282,15 @@ model MoodJournal {
   userId String @db.Uuid
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  mood MoodLevel
-  note String?   @db.Text // Ghi chú cảm xúc
+  mood       MoodType
+  note       String?  @db.Text   // Ghi chú cảm xúc
 
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  aiReply    String?  @db.Text   // Lời động viên AI sinh ra
+  aiMetadata Json?               // Metadata: model, tokens, latency…
 
-  @@index([userId])
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([userId, createdAt])
   @@map("MoodJournal")
 }
 
