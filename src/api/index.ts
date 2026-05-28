@@ -10,6 +10,7 @@ import moodJournalRoutes from "./mood-journal/moodJournal.route.js";
 import careTaskRoutes from "./care-task/careTask.route.js";
 import notificationRoutes from "./notification/notification.route.js";
 import userRoutes from "./user/user.route.js";
+import uploadRoutes from "./upload/upload.route.js";
 
 const router = Router();
 
@@ -29,6 +30,6 @@ router.use("/plant-updates", plantUpdateRoutes);
 router.use("/mood-journals", moodJournalRoutes);
 router.use("/care-tasks", careTaskRoutes);
 router.use("/notifications", notificationRoutes);
-
+router.use("/upload", uploadRoutes);
 
 export default router;
