@@ -101,6 +101,47 @@ export const updateNickname = async (req: Request, res: Response, next: NextFunc
       data: { nickname },
     });
     if (plant.count === 0) return res.status(404).json({ message: "Virtual plant not found" });
-    return res.status(200).json({ message: "Nickname updated" });
+  } catch (err) { next(err); }
+};
+
+// POST /api/virtual-plants/:id/care  — user dùng tài nguyên để chăm cây
+export const carePlant = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.id;
+    const { resourceType, amount = 5 } = req.body;
+    
+    // Check if the plant belongs to the user
+    const plant = await prisma.virtualPlant.findFirst({
+      where: { id: req.params.id as string, userId },
+    });
+    if (!plant) return res.status(404).json({ message: "Virtual plant not found" });
+
+    // Validate resource mapping
+    const resourceFieldMap: Record<string, keyof typeof plant> = {
+      WATER:      "waterAmount",
+      SUNLIGHT:   "sunlightAmount",
+      FERTILIZER: "fertilizerAmount",
+      AIR:        "airAmount",
+      LOVE:       "loveAmount",
+      DEW:        "dewAmount",
+    };
+    
+    const fieldName = resourceFieldMap[resourceType as string];
+    if (!fieldName) return res.status(400).json({ message: "Invalid resource type" });
+    
+    const currentVal = plant[fieldName] as number;
+    if (currentVal < amount) {
+      return res.status(400).json({ message: `Not enough ${resourceType}` });
+    }
+
+    // Decrement the resource
+    const updatedPlant = await prisma.virtualPlant.update({
+      where: { id: plant.id },
+      data: {
+        [fieldName]: { decrement: amount },
+      },
+    });
+
+    return res.status(200).json({ message: "Care action applied", data: updatedPlant });
   } catch (err) { next(err); }
 };

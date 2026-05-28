@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authenticate, authorize } from "../../middlewares/auth.middleware.js";
 import { validateBody } from "../../middlewares/validate.middleware.js";
-import { start, getMy, getOne, getTimeline, updateNickname } from "./virtualPlant.controller.js";
+import { start, getMy, getOne, getTimeline, updateNickname, carePlant } from "./virtualPlant.controller.js";
 import { startVirtualPlantSchema, updateNicknameSchema } from "./virtualPlant.schema.js";
 
 const router = Router();
@@ -122,5 +122,41 @@ router.get("/:id/timeline", authenticate, getTimeline);
  *         description: Nickname updated
  */
 router.patch("/:id", authenticate, validateBody(updateNicknameSchema), updateNickname);
+
+/**
+ * @swagger
+ * /virtual-plants/{id}/care:
+ *   post:
+ *     summary: Spend resources to care for virtual plant
+ *     tags: [VirtualPlant]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [resourceType]
+ *             properties:
+ *               resourceType:
+ *                 type: string
+ *                 example: WATER
+ *               amount:
+ *                 type: integer
+ *                 example: 5
+ *     responses:
+ *       200:
+ *         description: Care action applied
+ *       400:
+ *         description: Not enough resource
+ */
+router.post("/:id/care", authenticate, carePlant);
 
 export default router;

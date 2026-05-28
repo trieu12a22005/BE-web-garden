@@ -14,6 +14,7 @@ const characterStorage = new CloudinaryStorage({
   params: {
     folder:         "garden/task-characters",
     allowed_formats: ["jpg", "jpeg", "png", "gif", "webp"],
+    // background_removal: "cloudinary_ai", // Tạm tắt tính năng này để tránh lỗi nếu tài khoản chưa có Add-on
     transformation: [{ width: 400, height: 400, crop: "limit", quality: "auto" }],
   } as any,
 });
