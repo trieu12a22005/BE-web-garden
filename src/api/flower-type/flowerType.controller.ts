@@ -49,12 +49,26 @@ export const getOne = async (req: Request, res: Response, next: NextFunction) =>
   } catch (err) { next(err); }
 };
 
+// Helper xóa undefined khỏi JSON objects để Prisma không lỗi
+const sanitizeJson = (obj: any) => {
+  if (typeof obj !== 'object' || obj === null) return obj;
+  const newObj: any = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v !== undefined) newObj[k] = v;
+  }
+  return Object.keys(newObj).length > 0 ? newObj : undefined;
+};
+
 // POST /api/flower-types  [ADMIN]
 export const create = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { name, description, imageUrl, defaultDuration, stageImages, stageDurations } = req.body;
     const type = await prisma.flowerType.create({
-      data: { name, description, imageUrl, defaultDuration, stageImages, stageDurations },
+      data: {
+        name, description, imageUrl, defaultDuration,
+        stageImages: sanitizeJson(stageImages),
+        stageDurations: sanitizeJson(stageDurations),
+      },
     });
     return res.status(201).json({ message: "FlowerType created", data: type });
   } catch (err) { next(err); }
@@ -63,9 +77,14 @@ export const create = async (req: Request, res: Response, next: NextFunction) =>
 // PUT /api/flower-types/:id  [ADMIN]
 export const update = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const { stageImages, stageDurations, ...rest } = req.body;
     const type = await prisma.flowerType.update({
       where: { id: req.params.id as string },
-      data: req.body,
+      data: {
+        ...rest,
+        ...(stageImages !== undefined ? { stageImages: sanitizeJson(stageImages) || null } : {}),
+        ...(stageDurations !== undefined ? { stageDurations: sanitizeJson(stageDurations) || null } : {}),
+      },
     });
     return res.status(200).json({ message: "FlowerType updated", data: type });
   } catch (err) { next(err); }

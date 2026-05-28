@@ -20,6 +20,7 @@ export const errorHandler: ErrorRequestHandler = (
     if (err.code === "P2002") return res.status(409).json({ message: "Duplicate resource" });
     if (err.code === "P2025") return res.status(404).json({ message: "Resource not found" });
   }
-  console.error(err);
-  return res.status(500).json({ message: "Internal Server Error" });
+  console.error("500 ERROR CAUSE:", err);
+  const errMessage = err instanceof Error ? err.message : String(err);
+  return res.status(500).json({ message: "Internal Server Error", error: errMessage });
 };
