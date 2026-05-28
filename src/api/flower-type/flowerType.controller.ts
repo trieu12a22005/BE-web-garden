@@ -5,6 +5,7 @@ import prisma from "../../utils/prisma.js";
 export const getAll = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const types = await prisma.flowerType.findMany({
+      where: { isActive: true },
       orderBy: { name: "asc" },
       include: {
         realPlants: {
@@ -44,7 +45,7 @@ export const getAll = async (req: Request, res: Response, next: NextFunction) =>
 export const getOne = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const type = await prisma.flowerType.findUnique({ where: { id: req.params.id as string } });
-    if (!type) return res.status(404).json({ message: "FlowerType not found" });
+    if (!type || !type.isActive) return res.status(404).json({ message: "FlowerType not found" });
     return res.status(200).json({ data: type });
   } catch (err) { next(err); }
 };
@@ -93,7 +94,25 @@ export const update = async (req: Request, res: Response, next: NextFunction) =>
 // DELETE /api/flower-types/:id  [ADMIN]
 export const remove = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await prisma.flowerType.delete({ where: { id: req.params.id as string } });
-    return res.status(200).json({ message: "FlowerType deleted" });
+    const flowerType = await prisma.flowerType.findUnique({
+      where: { id: req.params.id as string },
+      include: { _count: { select: { realPlants: true } } },
+    });
+
+    if (!flowerType || !flowerType.isActive) {
+      return res.status(404).json({ message: "FlowerType not found" });
+    }
+
+    if (flowerType._count.realPlants > 0) {
+      return res.status(400).json({ message: "Không thể xóa: Đã có nhà vườn đăng ký loại hoa này." });
+    }
+
+    // Xóa mềm
+    await prisma.flowerType.update({
+      where: { id: flowerType.id },
+      data: { isActive: false },
+    });
+
+    return res.status(200).json({ message: "FlowerType soft-deleted" });
   } catch (err) { next(err); }
 };

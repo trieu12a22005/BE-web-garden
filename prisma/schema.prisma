@@ -170,6 +170,8 @@ model FlowerType {
   /// Số ngày mỗi giai đoạn: { "SEED": 7, "SPROUT": 14, "GROWING": 21, "BUDDING": 14, "BLOOMING": 30 }
   stageDurations  Json?   // Map<PlantStatus, number>
 
+  isActive        Boolean @default(true) // Phục vụ xóa mềm
+
   realPlants    RealPlant[]
   virtualPlants VirtualPlant[]
 
