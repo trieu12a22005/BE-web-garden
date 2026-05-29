@@ -228,6 +228,7 @@ model VirtualPlant {
   loveAmount       Int @default(0)
   dewAmount        Int @default(0)
   lastCaredAt      DateTime? @db.Timestamptz(3) // Lần chăm sóc gần nhất
+  resourceUsage    Json?     // Lưu lịch sử chăm sóc: { "WATER": ["timestamp1", "timestamp2"], "SUNLIGHT": [...] }
 
   userId String @db.Uuid
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)

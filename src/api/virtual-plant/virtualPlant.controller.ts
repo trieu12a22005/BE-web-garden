@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import prisma from "../../utils/prisma.js";
+import { generateCareThankYou } from "../mood-journal/aiJournal.service.js";
 
 // POST /api/virtual-plants/start  — user chọn hoa, BE tìm cây thật còn trống rồi tạo cây ảo
 export const start = async (req: Request, res: Response, next: NextFunction) => {
@@ -140,14 +141,50 @@ export const carePlant = async (req: Request, res: Response, next: NextFunction)
       return res.status(400).json({ message: `Not enough ${resourceType}` });
     }
 
-    // Decrement the resource
+    // Validate resource limits (2 times per day, 4 hours cooldown)
+    const now = new Date();
+    // Helper to format local date without timezone offset issues, just strictly using YYYY-MM-DD from ISO (UTC day) is usually fine for MVP,
+    // but better to use local logic or just UTC day boundary. We'll use UTC day boundary.
+    const todayStr = now.toISOString().split("T")[0];
+    const fourHoursMs = 4 * 60 * 60 * 1000;
+
+    const resourceUsage = (plant.resourceUsage as Record<string, string[]>) || {};
+    const usageForResource = resourceUsage[resourceType as string] || [];
+    
+    // Lọc ra các lần sử dụng trong ngày hôm nay
+    const todayUsages = usageForResource.filter(isoStr => isoStr.startsWith(todayStr));
+    
+    if (todayUsages.length >= 2) {
+      return res.status(400).json({ message: "Bạn đã cho cây loại tài nguyên này đủ rồi, ngày mai hãy tiếp tục nhé." });
+    }
+
+    if (todayUsages.length > 0) {
+      const lastUsageDate = new Date(todayUsages[todayUsages.length - 1]);
+      if (now.getTime() - lastUsageDate.getTime() < fourHoursMs) {
+        return res.status(400).json({ message: "Cây đang tiêu hóa tài nguyên này, hãy quay lại sau vài giờ nhé." });
+      }
+    }
+
+    // Thêm lần sử dụng mới
+    todayUsages.push(now.toISOString());
+    const newResourceUsage = {
+      ...resourceUsage,
+      [resourceType as string]: todayUsages
+    };
+
+    // Decrement the resource & update usage
     const updatedPlant = await prisma.virtualPlant.update({
       where: { id: plant.id },
       data: {
         [fieldName]: { decrement: amount },
+        resourceUsage: newResourceUsage,
+        lastCaredAt: now,
       },
     });
 
-    return res.status(200).json({ message: "Care action applied", data: updatedPlant });
+    // Lấy lời cảm ơn từ AI (có thể tốn vài giây)
+    const aiMessage = await generateCareThankYou(resourceType as string, plant.nickname || undefined);
+
+    return res.status(200).json({ message: "Care action applied", data: updatedPlant, aiMessage });
   } catch (err) { next(err); }
 };

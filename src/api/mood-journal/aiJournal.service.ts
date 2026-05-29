@@ -91,7 +91,7 @@ function containsCrisisContent(text?: string): boolean {
 }
 
 // ── Gọi OpenAI-compatible API ───────────────────────────────────────
-async function callChatCompletion(userMessage: string): Promise<{
+async function callChatCompletion(userMessage: string, systemMessage?: string): Promise<{
   text: string;
   metadata: Record<string, unknown>;
 }> {
@@ -115,7 +115,7 @@ async function callChatCompletion(userMessage: string): Promise<{
     body: JSON.stringify({
       model,
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: systemMessage || SYSTEM_PROMPT },
         { role: "user", content: userMessage },
       ],
       max_tokens: 256,
@@ -189,5 +189,34 @@ export async function generateJournalReply(
       source: "fallback",
       metadata: { error: errorMsg },
     };
+  }
+}
+
+// ── Hàm sinh câu cảm ơn khi chăm cây ────────────────────────────────
+export async function generateCareThankYou(
+  resourceType: string,
+  plantName?: string
+): Promise<string> {
+  const resourceLabels: Record<string, string> = {
+    WATER: "nước",
+    SUNLIGHT: "ánh sáng",
+    FERTILIZER: "phân bón",
+    AIR: "không khí",
+    LOVE: "yêu thương",
+    DEW: "sương mai",
+  };
+  const label = resourceLabels[resourceType] || resourceType;
+  const nameText = plantName ? `Tên của tôi là ${plantName}.` : "Tôi là một cái cây ảo.";
+  
+  const systemMessage = `Bạn là một cái cây đang được người dùng chăm sóc. ${nameText}
+Nhiệm vụ: Viết 1 câu nói ngắn gọn (dưới 15 từ), dễ thương, ấm áp bằng tiếng Việt để cảm ơn người dùng vì đã cho bạn ${label}.
+Không dùng icon (emoji) vì app đã hiển thị hiệu ứng rồi. Không xưng tôi-bạn chung chung mà hãy xưng là cây (hoặc tên của bạn) với người dùng.`;
+
+  try {
+    const result = await callChatCompletion(`Người dùng vừa cho tôi ${label}. Hãy nói cảm ơn.`, systemMessage);
+    return result.text;
+  } catch (err) {
+    console.warn(`[AI-ThankYou] Failed to generate thank you:`, err);
+    return `Cảm ơn bạn vì chút ${label} nhé!`;
   }
 }
