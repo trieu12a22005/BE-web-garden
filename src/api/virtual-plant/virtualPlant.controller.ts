@@ -136,9 +136,19 @@ export const carePlant = async (req: Request, res: Response, next: NextFunction)
     const fieldName = resourceFieldMap[resourceType as string];
     if (!fieldName) return res.status(400).json({ message: "Invalid resource type" });
     
+    const resourceLabels: Record<string, string> = {
+      WATER: "nước",
+      SUNLIGHT: "nắng",
+      FERTILIZER: "phân bón",
+      AIR: "không khí",
+      LOVE: "yêu thương",
+      DEW: "sương mai",
+    };
+    
     const currentVal = plant[fieldName] as number;
     if (currentVal < amount) {
-      return res.status(400).json({ message: `Not enough ${resourceType}` });
+      const label = resourceLabels[resourceType as string] || resourceType;
+      return res.status(400).json({ message: `Bạn không có đủ ${label} để chăm cây lúc này.` });
     }
 
     // Validate resource limits (2 times per day, 4 hours cooldown)
