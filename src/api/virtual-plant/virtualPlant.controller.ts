@@ -96,11 +96,17 @@ export const updateNickname = async (req: Request, res: Response, next: NextFunc
   try {
     const userId = req.user!.id;
     const { nickname } = req.body;
-    const plant = await prisma.virtualPlant.updateMany({
+    
+    // updateMany returns count, but we want to return the updated object if possible, 
+    // or just return success message
+    const updated = await prisma.virtualPlant.updateMany({
       where: { id: req.params.id as string, userId },
       data: { nickname },
     });
-    if (plant.count === 0) return res.status(404).json({ message: "Virtual plant not found" });
+    
+    if (updated.count === 0) return res.status(404).json({ message: "Virtual plant not found" });
+    
+    return res.status(200).json({ message: "Nickname updated successfully", nickname });
   } catch (err) { next(err); }
 };
 

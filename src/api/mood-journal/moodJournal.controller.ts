@@ -106,7 +106,7 @@ export const getById = async (req: Request, res: Response, next: NextFunction) =
     const { id } = req.params;
 
     const journal = await prisma.moodJournal.findFirst({
-      where: { id, userId },
+      where: { id: id as string, userId },
       select: {
         id: true,
         mood: true,

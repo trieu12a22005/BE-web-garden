@@ -67,13 +67,14 @@ Quy tắc bắt buộc:
 - Nếu nội dung note có dấu hiệu rất tiêu cực hoặc nguy cơ tự làm hại, hãy khuyến khích người dùng liên hệ người thân, chuyên gia hoặc hỗ trợ khẩn cấp.
 - Trả lời 1 đến 3 câu.
 - Giọng văn ấm áp, dịu, phù hợp app trồng cây.
-- Có thể nhắc hình ảnh cây một cách nhẹ nhàng.`;
+- Có thể nhắc hình ảnh cây một cách nhẹ nhàng. Nếu người dùng có đặt tên cho cây (cung cấp trong Input), hãy dùng tên đó (ví dụ: "Mầm Nhỏ", "Bé Nắng") thay vì gọi chung chung là "Cây".`;
 
 // ── Input / Output types ────────────────────────────────────────────
 export interface AiJournalInput {
   mood: MoodType;
   note?: string;
   recentMoods?: MoodType[];
+  plantName?: string;
 }
 
 export interface AiJournalResult {
@@ -167,6 +168,7 @@ export async function generateJournalReply(
     const moodLabel = MOOD_LABEL_VI[mood];
     let userMessage = `Mood: ${moodLabel}`;
     if (note) userMessage += `\nNote: ${note}`;
+    if (input.plantName) userMessage += `\nTên cây ảo của tôi: ${input.plantName}`;
     if (recentMoods?.length) {
       const labels = recentMoods.map((m) => MOOD_LABEL_VI[m]).join(", ");
       userMessage += `\n3 mood gần nhất: ${labels}`;
