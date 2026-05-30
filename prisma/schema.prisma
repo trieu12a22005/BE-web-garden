@@ -107,6 +107,7 @@ model User {
   avatarUrl    String?  @db.VarChar(500)
   role         UserRole @default(USER)
   isActive     Boolean  @default(true)
+  expoPushToken String? @db.VarChar(500) // Expo push token từ thiết bị mobile
   createdAt    DateTime @default(now()) @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @db.Timestamptz(3)
 

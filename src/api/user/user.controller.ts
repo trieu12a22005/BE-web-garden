@@ -47,3 +47,24 @@ export const toggleActive = async (req: Request, res: Response, next: NextFuncti
     next(error);
   }
 };
+
+// PATCH /api/users/push-token  [USER, FARMER] — lưu Expo push token từ thiết bị
+export const savePushToken = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.id;
+    const { pushToken } = req.body;
+
+    if (!pushToken || typeof pushToken !== 'string') {
+      return res.status(400).json({ error: 'pushToken is required' });
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { expoPushToken: pushToken },
+    });
+
+    return res.status(200).json({ message: 'Push token saved' });
+  } catch (error) {
+    next(error);
+  }
+};

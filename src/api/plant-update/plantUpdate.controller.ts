@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import prisma from "../../utils/prisma.js";
+import { notifyPlantUpdate } from "../../utils/expoPush.js";
 
 // POST /api/plant-updates  [FARMER]
 export const create = async (req: Request, res: Response, next: NextFunction) => {
@@ -20,9 +21,37 @@ export const create = async (req: Request, res: Response, next: NextFunction) =>
       data: { status },
     });
 
+    // ── Gửi push notification cho owner của cây ảo ──────────────────────────
+    // Không await để không block response
+    prisma.virtualPlant.findFirst({
+      where: { realPlantId },
+      include: {
+        user: { select: { expoPushToken: true, fullName: true } },
+        realPlant: {
+          select: {
+            code: true,
+            flowerType: { select: { name: true } },
+          },
+        },
+      },
+    }).then((vPlant) => {
+      const token = vPlant?.user?.expoPushToken;
+      if (!token) return;
+      const farmer = req.user as any;
+      notifyPlantUpdate({
+        expoPushToken: token,
+        plantCode: vPlant!.realPlant!.code,
+        flowerName: vPlant!.realPlant!.flowerType?.name ?? 'Cây của bạn',
+        status,
+        note,
+        farmerName: farmer?.fullName,
+      }).catch((err) => console.error('[Push] notifyPlantUpdate error:', err));
+    }).catch(() => {});
+
     return res.status(201).json({ message: "Plant update created", data: update });
   } catch (err) { next(err); }
 };
+
 
 // GET /api/plant-updates/:realPlantId  — lấy toàn bộ lịch sử cập nhật của cây thật
 export const getByRealPlant = async (req: Request, res: Response, next: NextFunction) => {
