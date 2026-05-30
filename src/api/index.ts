@@ -21,7 +21,7 @@ router.get("/", (_req: Request, res: Response) => {
 });
 
 router.use("/auth", authRoutes);
-router.use("/admin/users", userRoutes);
+router.use("/users", userRoutes);
 router.use("/flower-types", flowerTypeRoutes);
 router.use("/gardens", gardenRoutes);
 router.use("/real-plants", realPlantRoutes);
