@@ -105,7 +105,7 @@ export async function notifyPlantUpdate(opts: {
       plantCode: opts.plantCode,
     },
     sound: 'default',
-    channelId: 'garden-updates',
+    channelId: 'garden-updates-v2',
     priority: 'high',
   });
 }
