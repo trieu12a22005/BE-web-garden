@@ -30,3 +30,9 @@ export const completeCareTaskSchema = z.object({
   careTaskId: z.string().uuid(),
   virtualPlantId: z.string().uuid().optional(),
 });
+
+export const answerCareTaskQuizSchema = z.object({
+  careTaskId: z.string().uuid(),
+  selectedOptionIndex: z.number().int().min(0),
+  virtualPlantId: z.string().uuid().optional(),
+});

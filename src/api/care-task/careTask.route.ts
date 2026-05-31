@@ -6,8 +6,13 @@ import {
   getAll, create, updateTask,
   uploadCharacterImage, deleteCharacterImage,
   completeTask, getMyLogs,
+  getQuizzes, answerQuiz,
 } from "./careTask.controller.js";
-import { updateCareTaskSchema, completeCareTaskSchema } from "./careTask.schema.js";
+import {
+  updateCareTaskSchema,
+  completeCareTaskSchema,
+  answerCareTaskQuizSchema,
+} from "./careTask.schema.js";
 
 const router = Router();
 
@@ -31,6 +36,15 @@ const router = Router();
  *         description: List of tasks with characterImageUrl
  */
 router.get("/", authenticate, getAll);
+
+router.get("/quizzes", authenticate, getQuizzes);
+
+router.post(
+  "/quizzes/answer",
+  authenticate,
+  validateBody(answerCareTaskQuizSchema),
+  answerQuiz,
+);
 
 /**
  * @swagger

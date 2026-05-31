@@ -1,7 +1,15 @@
 import type { Request, Response, NextFunction } from "express";
 import prisma from "../../utils/prisma.js";
+import type { CareTask } from "../../generated/prisma/index.js";
 
-// ── Seeded PRNG (mulberry32) — deterministic random từ seed số nguyên ─────────
+const RESOURCE_TYPES = ["WATER", "SUNLIGHT", "FERTILIZER", "AIR", "LOVE", "DEW"];
+const DAILY_LIMIT = 10;
+const QUIZ_OPTIONS = [
+  "Ưu tiên an toàn, minh bạch và làm đúng quy trình.",
+  "Bỏ qua bước kiểm tra để hoàn thành nhanh hơn.",
+  "Chờ người khác xử lý thay cho mình.",
+];
+
 function seededRandom(seed: number) {
   return function () {
     seed |= 0; seed = seed + 0x6D2B79F5 | 0;
@@ -11,71 +19,182 @@ function seededRandom(seed: number) {
   };
 }
 
-// ── Seed theo ngày (YYYYMMDD) — đổi mới mỗi 24h ────────────────────────────
 function todaySeed(): number {
   const d = new Date();
   return parseInt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`);
 }
 
-// GET /api/care-tasks — trả 10 task/ngày, đảm bảo đủ 6 loại tài nguyên
-export const getAll = async (req: Request, res: Response, next: NextFunction) => {
+function hashString(value: string): number {
+  return value.split("").reduce((total, char) => total + char.charCodeAt(0), 0);
+}
+
+function buildQuiz(task: CareTask) {
+  const correctOptionIndex = hashString(task.id) % QUIZ_OPTIONS.length;
+  const options = [...QUIZ_OPTIONS];
+  const correctOption = options[0]!;
+  options[0] = options[correctOptionIndex]!;
+  options[correctOptionIndex] = correctOption;
+
+  return {
+    quizQuestion: `Trong tình huống "${task.title}", bạn nên chọn cách xử lý nào?`,
+    quizOptions: options,
+    correctOptionIndex,
+  };
+}
+
+function toPublicQuiz(task: CareTask) {
+  const quiz = buildQuiz(task);
+  return {
+    ...task,
+    quizQuestion: quiz.quizQuestion,
+    quizOptions: quiz.quizOptions,
+  };
+}
+
+function selectDailyTasks(allTasks: CareTask[]): CareTask[] {
+  const rand = seededRandom(todaySeed());
+
+  const shuffle = <T>(arr: T[]): T[] => {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      const temp = a[i];
+      a[i] = a[j] as T;
+      a[j] = temp as T;
+    }
+    return a;
+  };
+
+  const byResource = new Map<string, CareTask[]>();
+  for (const rt of RESOURCE_TYPES) byResource.set(rt, []);
+  for (const task of allTasks) byResource.get(task.rewardResource)?.push(task);
+
+  const selected: CareTask[] = [];
+  const usedIds = new Set<string>();
+  for (const rt of RESOURCE_TYPES) {
+    const group = shuffle(byResource.get(rt) ?? []);
+    if (group.length > 0) {
+      const first = group[0]!;
+      selected.push(first);
+      usedIds.add(first.id);
+    }
+  }
+
+  const remaining = shuffle(allTasks.filter((task) => !usedIds.has(task.id)));
+  for (const task of remaining) {
+    if (selected.length >= DAILY_LIMIT) break;
+    selected.push(task);
+  }
+
+  return shuffle(selected);
+}
+
+async function completeTaskForUser(userId: string, careTaskId: string, virtualPlantId?: string) {
+  const taskDate = new Date();
+  taskDate.setHours(0, 0, 0, 0);
+
+  const careTask = await prisma.careTask.findUnique({ where: { id: careTaskId } });
+  if (!careTask) return null;
+
+  const existingLog = await prisma.careTaskLog.findUnique({
+    where: {
+      userId_careTaskId_taskDate: { userId, careTaskId, taskDate },
+    },
+    include: { careTask: true },
+  });
+  if (existingLog) return existingLog;
+
+  const log = await prisma.careTaskLog.create({
+    data: { userId, careTaskId, virtualPlantId, taskDate, completedAt: new Date() },
+    include: { careTask: true },
+  });
+
+  if (virtualPlantId) {
+    const resourceField: Record<string, object> = {
+      WATER:      { waterAmount:      { increment: careTask.rewardAmount } },
+      SUNLIGHT:   { sunlightAmount:   { increment: careTask.rewardAmount } },
+      FERTILIZER: { fertilizerAmount: { increment: careTask.rewardAmount } },
+      AIR:        { airAmount:        { increment: careTask.rewardAmount } },
+      LOVE:       { loveAmount:       { increment: careTask.rewardAmount } },
+      DEW:        { dewAmount:        { increment: careTask.rewardAmount } },
+    };
+
+    const yesterday = new Date(taskDate);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayLog = await prisma.careTaskLog.findFirst({
+      where: { userId, taskDate: yesterday, virtualPlantId },
+    });
+
+    await prisma.virtualPlant.update({
+      where: { id: virtualPlantId },
+      data: {
+        ...(resourceField[careTask.rewardResource] ?? {}),
+        growthPoint: { increment: careTask.growthReward },
+        lastCaredAt: new Date(),
+        streakCount: yesterdayLog ? { increment: 1 } : 1,
+      },
+    });
+  }
+
+  return log;
+}
+
+export const getAll = async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const allTasks = await prisma.careTask.findMany({
       where: { isActive: true },
     });
-
-    const RESOURCE_TYPES = ["WATER", "SUNLIGHT", "FERTILIZER", "AIR", "LOVE", "DEW"];
-    const DAILY_LIMIT = 10;
-
-    // Nhóm task theo loại tài nguyên
-    const byResource = new Map<string, typeof allTasks>();
-    for (const rt of RESOURCE_TYPES) byResource.set(rt, []);
-    for (const t of allTasks) byResource.get(t.rewardResource)?.push(t);
-
-    const rand = seededRandom(todaySeed());
-
-    // Shuffle helper dùng seeded random
-    const shuffle = <T>(arr: T[]): T[] => {
-      const a = [...arr];
-      for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(rand() * (i + 1));
-        const temp = a[i];
-        a[i] = a[j] as T;
-        a[j] = temp as T;
-      }
-      return a;
-    };
-
-    // Bước 1: lấy 1 task ngẫu nhiên từ mỗi loại tài nguyên (tối đa 6)
-    const selected: typeof allTasks = [];
-    const usedIds = new Set<string>();
-    for (const rt of RESOURCE_TYPES) {
-      const group = shuffle(byResource.get(rt) ?? []);
-      if (group.length > 0) {
-        const first = group[0]!;
-        selected.push(first);
-        usedIds.add(first.id);
-      }
-    }
-
-    // Bước 2: điền thêm từ pool còn lại cho đủ DAILY_LIMIT
-    const remaining = shuffle(allTasks.filter((t) => !usedIds.has(t.id)));
-    for (const t of remaining) {
-      if (selected.length >= DAILY_LIMIT) break;
-      selected.push(t);
-    }
-
-    // Shuffle lại lần cuối để thứ tự hiển thị không cố định
-    return res.status(200).json({ data: shuffle(selected) });
+    return res.status(200).json({ data: selectDailyTasks(allTasks) });
   } catch (err) { next(err); }
 };
 
-// POST /api/care-tasks  [ADMIN] — multipart/form-data, ảnh image là tùy chọn
+export const getQuizzes = async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const allTasks = await prisma.careTask.findMany({
+      where: { isActive: true },
+    });
+    return res.status(200).json({ data: selectDailyTasks(allTasks).map(toPublicQuiz) });
+  } catch (err) { next(err); }
+};
+
+export const answerQuiz = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.id;
+    const { careTaskId, selectedOptionIndex, virtualPlantId } = req.body;
+
+    const careTask = await prisma.careTask.findUnique({ where: { id: careTaskId } });
+    if (!careTask || !careTask.isActive) {
+      return res.status(404).json({ message: "CareTask quiz not found" });
+    }
+
+    const quiz = buildQuiz(careTask);
+    if (selectedOptionIndex !== quiz.correctOptionIndex) {
+      return res.status(200).json({
+        data: {
+          correct: false,
+          correctOptionIndex: quiz.correctOptionIndex,
+          message: "Đáp án chưa đúng",
+        },
+      });
+    }
+
+    const log = await completeTaskForUser(userId, careTaskId, virtualPlantId);
+    return res.status(201).json({
+      message: "Quiz answered correctly",
+      data: {
+        correct: true,
+        log,
+        rewardResource: careTask.rewardResource,
+        rewardAmount: careTask.rewardAmount,
+        growthReward: careTask.growthReward,
+      },
+    });
+  } catch (err) { next(err); }
+};
+
 export const create = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const file = req.file as any; // Dùng any để tránh lỗi namespace Express.Multer
-
-    // multipart gửi tất cả field dưới dạng string — cần parse
+    const file = req.file as any;
     const {
       title, description, type, isDefault,
       rewardResource, rewardAmount, growthReward,
@@ -104,7 +223,6 @@ export const create = async (req: Request, res: Response, next: NextFunction) =>
   } catch (err) { next(err); }
 };
 
-// PATCH /api/care-tasks/:id  [ADMIN] — cập nhật thông tin task (không gồm ảnh)
 export const updateTask = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
@@ -116,12 +234,9 @@ export const updateTask = async (req: Request, res: Response, next: NextFunction
   } catch (err) { next(err); }
 };
 
-// POST /api/care-tasks/:id/character-image  [ADMIN] — upload hoạt ảnh nhân vật
 export const uploadCharacterImage = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-
-    // multer-storage-cloudinary tự upload, req.file.path = URL Cloudinary
     const file = req.file as any;
     if (!file) {
       return res.status(400).json({ message: "No file uploaded" });
@@ -139,7 +254,6 @@ export const uploadCharacterImage = async (req: Request, res: Response, next: Ne
   } catch (err) { next(err); }
 };
 
-// DELETE /api/care-tasks/:id/character-image  [ADMIN] — xóa ảnh nhân vật
 export const deleteCharacterImage = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
@@ -154,61 +268,16 @@ export const deleteCharacterImage = async (req: Request, res: Response, next: Ne
   } catch (err) { next(err); }
 };
 
-// POST /api/care-task-logs  — user hoàn thành 1 task hôm nay
 export const completeTask = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.user!.id;
     const { careTaskId, virtualPlantId } = req.body;
-
-    const taskDate = new Date();
-    taskDate.setHours(0, 0, 0, 0);
-
-    // Lấy thông tin phần thưởng thực của task
-    const careTask = await prisma.careTask.findUnique({ where: { id: careTaskId } });
-    if (!careTask) return res.status(404).json({ message: "CareTask not found" });
-
-    const log = await prisma.careTaskLog.create({
-      data: { userId, careTaskId, virtualPlantId, taskDate, completedAt: new Date() },
-      include: { careTask: true },
-    });
-
-    // Cập nhật tài nguyên cây ảo — increment đúng field theo rewardResource
-    if (virtualPlantId) {
-      // Map ResourceType → tên field trong DB
-      const resourceField: Record<string, object> = {
-        WATER:      { waterAmount:      { increment: careTask.rewardAmount } },
-        SUNLIGHT:   { sunlightAmount:   { increment: careTask.rewardAmount } },
-        FERTILIZER: { fertilizerAmount: { increment: careTask.rewardAmount } },
-        AIR:        { airAmount:        { increment: careTask.rewardAmount } },
-        LOVE:       { loveAmount:       { increment: careTask.rewardAmount } },
-        DEW:        { dewAmount:        { increment: careTask.rewardAmount } },
-      };
-
-      const resourceUpdate = resourceField[careTask.rewardResource] ?? {};
-
-      // Streak: kiểm tra xem hôm qua user có chăm sóc không
-      const yesterday = new Date(taskDate);
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayLog = await prisma.careTaskLog.findFirst({
-        where: { userId, taskDate: yesterday, virtualPlantId },
-      });
-
-      await prisma.virtualPlant.update({
-        where: { id: virtualPlantId },
-        data: {
-          ...resourceUpdate,
-          growthPoint: { increment: careTask.growthReward }, // giữ cho thành tích
-          lastCaredAt: new Date(),
-          streakCount: yesterdayLog ? { increment: 1 } : 1,
-        },
-      });
-    }
-
+    const log = await completeTaskForUser(userId, careTaskId, virtualPlantId);
+    if (!log) return res.status(404).json({ message: "CareTask not found" });
     return res.status(201).json({ message: "Task completed", data: log });
   } catch (err) { next(err); }
 };
 
-// GET /api/care-task-logs/my  — lịch sử task hôm nay của user
 export const getMyLogs = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.user!.id;

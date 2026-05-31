@@ -35,6 +35,7 @@ export const toggleActive = async (req: Request, res: Response, next: NextFuncti
   try {
     const { id } = req.params;
     const { isActive } = req.body;
+    if (!id || Array.isArray(id)) return res.status(400).json({ message: "User id is required" });
 
     const user = await prisma.user.update({
       where: { id },

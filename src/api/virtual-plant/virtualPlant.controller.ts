@@ -155,7 +155,7 @@ export const carePlant = async (req: Request, res: Response, next: NextFunction)
     const now = new Date();
     // Helper to format local date without timezone offset issues, just strictly using YYYY-MM-DD from ISO (UTC day) is usually fine for MVP,
     // but better to use local logic or just UTC day boundary. We'll use UTC day boundary.
-    const todayStr = now.toISOString().split("T")[0];
+    const todayStr = now.toISOString().slice(0, 10);
     const fourHoursMs = 4 * 60 * 60 * 1000;
 
     const resourceUsage = (plant.resourceUsage as Record<string, string[]>) || {};
@@ -169,7 +169,9 @@ export const carePlant = async (req: Request, res: Response, next: NextFunction)
     }
 
     if (todayUsages.length > 0) {
-      const lastUsageDate = new Date(todayUsages[todayUsages.length - 1]);
+      const lastUsage = todayUsages[todayUsages.length - 1];
+      if (!lastUsage) return res.status(400).json({ message: "Invalid resource usage" });
+      const lastUsageDate = new Date(lastUsage);
       if (now.getTime() - lastUsageDate.getTime() < fourHoursMs) {
         return res.status(400).json({ message: "Cây đang tiêu hóa tài nguyên này, hãy quay lại sau vài giờ nhé." });
       }
