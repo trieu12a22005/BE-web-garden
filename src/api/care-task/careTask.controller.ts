@@ -2,7 +2,8 @@ import type { Request, Response, NextFunction } from "express";
 import prisma from "../../utils/prisma.js";
 import type { CareTask } from "../../generated/prisma/index.js";
 
-const RESOURCE_TYPES = ["WATER", "SUNLIGHT", "FERTILIZER", "AIR", "LOVE", "DEW"];
+const RESOURCE_TYPES = ["WATER", "SUNLIGHT", "FERTILIZER", "LOVE"];
+const QUIZ_REWARD_AMOUNT = 5;
 const DAILY_LIMIT = 10;
 const QUIZ_OPTIONS = [
   "Ưu tiên an toàn, minh bạch và làm đúng quy trình.",
@@ -46,12 +47,14 @@ function toPublicQuiz(task: CareTask) {
   const quiz = buildQuiz(task);
   return {
     ...task,
+    rewardAmount: QUIZ_REWARD_AMOUNT,
     quizQuestion: quiz.quizQuestion,
     quizOptions: quiz.quizOptions,
   };
 }
 
 function selectDailyTasks(allTasks: CareTask[]): CareTask[] {
+  const availableTasks = allTasks.filter((task) => RESOURCE_TYPES.includes(task.rewardResource));
   const rand = seededRandom(todaySeed());
 
   const shuffle = <T>(arr: T[]): T[] => {
@@ -67,7 +70,7 @@ function selectDailyTasks(allTasks: CareTask[]): CareTask[] {
 
   const byResource = new Map<string, CareTask[]>();
   for (const rt of RESOURCE_TYPES) byResource.set(rt, []);
-  for (const task of allTasks) byResource.get(task.rewardResource)?.push(task);
+  for (const task of availableTasks) byResource.get(task.rewardResource)?.push(task);
 
   const selected: CareTask[] = [];
   const usedIds = new Set<string>();
@@ -80,7 +83,7 @@ function selectDailyTasks(allTasks: CareTask[]): CareTask[] {
     }
   }
 
-  const remaining = shuffle(allTasks.filter((task) => !usedIds.has(task.id)));
+  const remaining = shuffle(availableTasks.filter((task) => !usedIds.has(task.id)));
   for (const task of remaining) {
     if (selected.length >= DAILY_LIMIT) break;
     selected.push(task);
@@ -110,15 +113,6 @@ async function completeTaskForUser(userId: string, careTaskId: string, virtualPl
   });
 
   if (virtualPlantId) {
-    const resourceField: Record<string, object> = {
-      WATER:      { waterAmount:      { increment: careTask.rewardAmount } },
-      SUNLIGHT:   { sunlightAmount:   { increment: careTask.rewardAmount } },
-      FERTILIZER: { fertilizerAmount: { increment: careTask.rewardAmount } },
-      AIR:        { airAmount:        { increment: careTask.rewardAmount } },
-      LOVE:       { loveAmount:       { increment: careTask.rewardAmount } },
-      DEW:        { dewAmount:        { increment: careTask.rewardAmount } },
-    };
-
     const yesterday = new Date(taskDate);
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayLog = await prisma.careTaskLog.findFirst({
@@ -128,7 +122,10 @@ async function completeTaskForUser(userId: string, careTaskId: string, virtualPl
     await prisma.virtualPlant.update({
       where: { id: virtualPlantId },
       data: {
-        ...(resourceField[careTask.rewardResource] ?? {}),
+        waterAmount: { increment: QUIZ_REWARD_AMOUNT },
+        sunlightAmount: { increment: QUIZ_REWARD_AMOUNT },
+        fertilizerAmount: { increment: QUIZ_REWARD_AMOUNT },
+        loveAmount: { increment: QUIZ_REWARD_AMOUNT },
         growthPoint: { increment: careTask.growthReward },
         lastCaredAt: new Date(),
         streakCount: yesterdayLog ? { increment: 1 } : 1,
@@ -184,8 +181,13 @@ export const answerQuiz = async (req: Request, res: Response, next: NextFunction
       data: {
         correct: true,
         log,
-        rewardResource: careTask.rewardResource,
-        rewardAmount: careTask.rewardAmount,
+        rewards: {
+          WATER: QUIZ_REWARD_AMOUNT,
+          SUNLIGHT: QUIZ_REWARD_AMOUNT,
+          FERTILIZER: QUIZ_REWARD_AMOUNT,
+          LOVE: QUIZ_REWARD_AMOUNT,
+        },
+        rewardAmount: QUIZ_REWARD_AMOUNT,
         growthReward: careTask.growthReward,
       },
     });
